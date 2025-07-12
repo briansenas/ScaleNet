@@ -1,4 +1,5 @@
 # My stuff
+data/
 *.zip
 RELEASE_ScaleNet_minimal/data/COCO/
 # Byte-compiled / optimized / DLL files
