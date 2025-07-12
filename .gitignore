@@ -4,6 +4,8 @@ apex_no_distributed/
 cityscapesScripts/
 cocoapi/
 maskrcnn-benchmark/
+RELEASE_ScaleNet_minimal/maskrcnn_benchmark/
+RELEASE_ScaleNet_minimal/maskrcnn_rui/csrc
 data/
 *.zip
 RELEASE_ScaleNet_minimal/data/COCO/
