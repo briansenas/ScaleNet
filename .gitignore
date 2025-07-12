@@ -1,4 +1,9 @@
 # My stuff
+apex/
+apex_no_distributed/
+cityscapesScripts/
+cocoapi/
+maskrcnn-benchmark/
 data/
 *.zip
 RELEASE_ScaleNet_minimal/data/COCO/
