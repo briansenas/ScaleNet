@@ -41,14 +41,14 @@ def getBins(minval, maxval, sigma, alpha, beta, kappa):
 # DS_ROOT = "/home/holdgeof/data/dimension_match_image_crops/"
 # DS_ROOT = "/home/holdgeof/data/sun360_sphericaldistortion"
 # DS_ROOT = "/newfoundland/data_extra/SUN360/crops_dataset_old"
-# DS_ROOT = "/data/SUN360/sun360_sphericaldistortion_oriDist_full"
-# DS_ROOT = '/data/SUN360/crops_dataset_kalyan'
-# DS_ROOT = '/data/SUN360/crops_dataset_cvpr_myDist'
+# DS_ROOT = "data/SUN360/sun360_sphericaldistortion_oriDist_full"
+# DS_ROOT = 'data/SUN360/crops_dataset_kalyan'
+# DS_ROOT = 'data/SUN360/crops_dataset_cvpr_myDist'
 
 
-# DS_ROOT = '/data/SUN360/crops_dataset_cvpr_myDistNarrowerLarge1105' # ECCV submission: SUNV1
+# DS_ROOT = 'data/SUN360/crops_dataset_cvpr_myDistNarrowerLarge1105' # ECCV submission: SUNV1
 DS_ROOT = "data/SUN360_mini_crops_dataset_cvpr_myDistNarrowerLarge1105"
-# DS_ROOT = '/data/SUN360/crops_dataset_cvpr_myDistWider20200403' # SUNV2
+# DS_ROOT = 'data/SUN360/crops_dataset_cvpr_myDistWider20200403' # SUNV2
 
 if "Narrower" in DS_ROOT:
     # crops_dataset_cvpr_myDistNarrower
@@ -149,26 +149,26 @@ def getOffset(pitch, roll, vFoV, im_h, im_w):
     return offset
 
 
-# def midpointpitch2bin(midpoint, pitch):
-#     if np.isnan(midpoint):
-#         if pitch < 0:
-#             return np.digitize(pitch, pitch_bins_low)
-#         else:
-#             return np.digitize(pitch, pitch_bins_high) + 224
-#     assert 0 <= midpoint <= 1
-#     return int(midpoint*192) + 32
-#
-#
-# def bin2midpointpitch(bins):
-#     pos = np.squeeze(bins.argmax(axis=-1))
-#     if pos < 31:
-#         return False, pitch_bins_low[pos]
-#     elif pos == 255:
-#         return False, np.pi/6
-#     elif pos >= 224:
-#         return False, pitch_bins_high[pos - 224]
-#     else:
-#         return True, (pos - 32)/192
+def midpointpitch2bin(midpoint, pitch):
+    if np.isnan(midpoint):
+        if pitch < 0:
+            return np.digitize(pitch, pitch_bins_low)
+        else:
+            return np.digitize(pitch, pitch_bins_high) + 224
+    assert 0 <= midpoint <= 1
+    return int(midpoint * 192) + 32
+
+
+def bin2midpointpitch(bins):
+    pos = np.squeeze(bins.argmax(axis=-1))
+    if pos < 31:
+        return False, pitch_bins_low[pos]
+    elif pos == 255:
+        return False, np.pi / 6
+    elif pos >= 224:
+        return False, pitch_bins_high[pos - 224]
+    else:
+        return True, (pos - 32) / 192
 
 
 def bins2horizon(bins):
@@ -390,5 +390,3 @@ if __name__ == "__main__":
     print(len(train))
     for a in range(len(train)):
         _ = train[a]
-        # print("---")
-        # import pdb; pdb.set_trace()

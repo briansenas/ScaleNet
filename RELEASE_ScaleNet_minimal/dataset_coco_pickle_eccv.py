@@ -14,8 +14,6 @@ from scipy.io import loadmat
 from scipy.stats import norm
 from termcolor import colored
 
-# from torchvision import transforms
-
 
 def getBins(minval, maxval, sigma, alpha, beta, kappa):
     """Remember, bin 0 = below value! last bin mean >= maxval"""
@@ -66,27 +64,27 @@ def getBins(minval, maxval, sigma, alpha, beta, kappa):
 #     return int(midpoint*192) + 32
 
 
-def bin2midpointpitch(bins):
-    pos = np.squeeze(bins.argmax(axis=-1))
-    if pos < 31:
-        return False, pitch_bins_low[pos]
-    elif pos == 255:
-        return False, np.pi / 6
-    elif pos >= 224:
-        return False, pitch_bins_high[pos - 224]
-    else:
-        return True, (pos - 32) / 192
-
-
-def make_bins_layers_list(x_bins_lowHigh_list):
-    x_bins_layers_list = []
-    for layer_idx, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
-        x_bins = np.linspace(x_bins_lowHigh[0], x_bins_lowHigh[1], 255)
-        x_bins_centers = x_bins.copy()
-        x_bins_centers[:-1] += np.diff(x_bins_centers) / 2
-        x_bins_centers = np.append(x_bins_centers, x_bins_centers[-1])  # 42 bins
-        x_bins_layers_list.append(x_bins_centers)
-    return x_bins_layers_list
+# def bin2midpointpitch(bins):
+#     pos = np.squeeze(bins.argmax(axis=-1))
+#     if pos < 31:
+#         return False, pitch_bins_low[pos]
+#     elif pos == 255:
+#         return False, np.pi / 6
+#     elif pos >= 224:
+#         return False, pitch_bins_high[pos - 224]
+#     else:
+#         return True, (pos - 32) / 192
+#
+#
+# def make_bins_layers_list(x_bins_lowHigh_list):
+#     x_bins_layers_list = []
+#     for layer_idx, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
+#         x_bins = np.linspace(x_bins_lowHigh[0], x_bins_lowHigh[1], 255)
+#         x_bins_centers = x_bins.copy()
+#         x_bins_centers[:-1] += np.diff(x_bins_centers) / 2
+#         x_bins_centers = np.append(x_bins_centers, x_bins_centers[-1])  # 42 bins
+#         x_bins_layers_list.append(x_bins_centers)
+#     return x_bins_layers_list
 
 
 # yc_bins_centers_1 = np.append(yc_bins_centers_1, yc_bins_centers_1[-1]) # 42 bins
@@ -162,21 +160,21 @@ results_path_yannick = "data/coco_results/yannick_results_train2017_filtered"
 # image_path = '/home/ruizhu/Documents/Projects/adobe_scale_est/data/COCO/train2017'
 # bbox_path = '/home/ruizhu/Documents/Projects/adobe_scale_est/data/coco_results/imgs_with_morethan2_standing_persons_allVis_train2017_2'
 
-# bbox_path = '/data/COCO/coco_results/imgs_with_morethan2_standing_persons_allVis_train2017_2'
+# bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_allVis_train2017_2'
 
 
 # new dataset 2020
-# bbox_path = '/data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200101-2'
-# bbox_path = '/data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200103-v4'
-# bbox_path = '/data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200103-v5_ratio2-8'
+# bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200101-2'
+# bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200103-v4'
+# bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200103-v5_ratio2-8'
 
 pickle_paths = {
-    # 'test': '/data/COCO/coco_results/results_with_kps_20200225_val2017-vis_filtered_2-8_moreThan2/pickle'}
+    # 'test': 'data/COCO/coco_results/results_with_kps_20200225_val2017-vis_filtered_2-8_moreThan2/pickle'}
     "train-val": "data/coco_results/results_with_kps_20200208_morethan2_2-8/pickle",
     "test": "data/coco_results/results_with_kps_20200225_val2017_test_detOnly_filtered_2-8_moreThan2/pickle",
 }
 
-# pickle_paths['train-val'] = '/data/COCO/coco_results/results_with_kps_20200221_Car_noSmall-ratio1-35-mergeWith-kps_20200208_morethan2_2-8/pickle' #MultiCat
+# pickle_paths['train-val'] = 'data/COCO/coco_results/results_with_kps_20200221_Car_noSmall-ratio1-35-mergeWith-kps_20200208_morethan2_2-8/pickle' #MultiCat
 pickle_paths["test"] = (
     "/results_test_20200302_Car_noSmall-ratio1-35-mergeWith-results_with_kps_20200225_train2017_detOnly_filtered_2-8_moreThan2/pickle"  # MultiCat
 )
@@ -206,22 +204,21 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
         ], "wrong dataset split for COCO2017Scale!"
         if split in ["train", "val"]:
             ann_file = (
-                "/data/COCO/annotations/person_keypoints_train2017.json"  # !!!! tmp!
+                "data/COCO/annotations/person_keypoints_train2017.json"  # !!!! tmp!
             )
-            root = "/data/COCO/train2017"
+            root = "data/COCO/train2017"
             pickle_path = pickle_paths["train-val"]
             bbox_path = bbox_paths["train-val"]
-            image_path = "/data/COCO/train2017"
+            image_path = "data/COCO/train2017"
             # self.train = True
         else:
             ann_file = (
-                "/data/COCO/annotations/person_keypoints_val2017.json"  # !!!! tmp!
+                "data/COCO/annotations/person_keypoints_val2017.json"  # !!!! tmp!
             )
-            root = "/data/COCO/val2017"
+            root = "data/COCO/val2017"
             pickle_path = pickle_paths["test"]
             bbox_path = bbox_paths["test"]
-            image_path = "/data/COCO/val2017"
-            # self.train = False
+            image_path = "data/COCO/val2017"
         super().__init__(root, ann_file)
 
         self.opt = opt
@@ -256,7 +253,8 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
             self.yannick_mat_files = self.yannick_mat_files[: int(num_mat_files * 0.8)]
         elif split == "val":
             self.yannick_mat_files = self.yannick_mat_files[-int(num_mat_files * 0.2) :]
-        logger.info(self.yannick_mat_files[0])
+        # I don't have the mat files, seems odd. It's a missing piece for the training dataset
+        # logger.info(self.yannick_mat_files[0])
         # self.yannick_mat_files = self.yannick_mat_files[:100]
         # with open("filelist_spherical.json", "w") as fhdl:
         #     json.dump(self.data, fhdl)
@@ -445,11 +443,12 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
 
         W, H = im_ori_RGB.size[:2]
         if self.train:
+            # NOTE: The yannick mat files are some sort of camera parameters prediction
             yannick_results = loadmat(self.yannick_mat_files[k])
-            horizon_visible = yannick_results["horizon_visible"][0][0].astype(
-                np.float32,
-            )
-            assert horizon_visible == 1
+            # horizon_visible = yannick_results["horizon_visible"][0][0].astype(
+            #     np.float32,
+            # )
+            # assert horizon_visible == 1
             horizon = yannick_results["pitch"][0][0].astype(np.float32)
             horizon_pixels_yannick = H * horizon
             v0 = H - horizon_pixels_yannick
@@ -648,14 +647,7 @@ def collate_fn_padd(batch):
 
 if __name__ == "__main__":
 
-    # this_bin = midpointpitch2bin(1.1, 0.0)
-    # a = np.zeros((256,)); a[this_bin] = 1
-    # print("bin:", this_bin, "recovered:", bin2midpointpitch(a))
-
-    # sys.exit()
     train = COCO2017Scale(train=True)
     print(len(train))
     for a in range(len(train)):
         _ = train[a]
-        # print("---")
-        # import pdb; pdb.set_trace()
