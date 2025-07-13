@@ -1,14 +1,15 @@
+-f https://download.pytorch.org/whl/torch_stable.html
+cityscapesscripts
 jupyterlab
-tensorboardX
-tqdm
-scikit-image
-termcolor
 opencv-python
 Pillow==6.1
-yacs
-torch==1.7.0
-torchvision
-torchsummary
-tensorboard
 pycocotools
-cityscapesscripts
+scikit-image
+tensorboard
+tensorboardX
+termcolor
+torch==1.7.0+cu110
+torchsummary
+torchvision==0.8.1+cu110
+tqdm
+yacs
