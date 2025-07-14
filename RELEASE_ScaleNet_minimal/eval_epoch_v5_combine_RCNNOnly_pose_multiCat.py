@@ -1,4 +1,4 @@
-import random
+import itertools
 from statistics import mean
 
 import numpy as np
@@ -11,7 +11,8 @@ from tqdm import tqdm
 from train_batch_combine_RCNNOnly_v5_pose_multiCat import train_batch_combine
 from utils.train_utils import reduce_loss_dict
 from utils.train_utils import sum_bbox_ratios
-from utils.utils_misc import *
+from utils.utils_misc import batch_dict_to_list_of_dicts
+from utils.utils_misc import colored
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -36,7 +37,7 @@ def eval_epoch_combine_RCNNOnly(
 ):
     # epoch = 0
     # Eval
-    eval_loss = 0
+    # eval_loss = 0
     # model.eval()
 
     # logger.info(colored('Validating %d COCO batches...'%len(eval_loader), 'red', 'on_yellow'))
@@ -538,4 +539,3 @@ def eval_epoch_combine_RCNNOnly(
             writer.add_scalar("training/eval_epoch", epoch, tid)
 
     return return_dict_epoch
-    # return eval_loss_list, eval_loss_vt_list, eval_loss_yc_list, eval_loss_yc_BCE_list, eval_error_vt_fit_list, vt_loss_allBoxes_list

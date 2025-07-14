@@ -110,10 +110,6 @@ def makeAndSaveImg(img_id, img, rndid, if_debug=False):
         else:
             roll = cauchy.rvs(loc=roll_mu, scale=roll_sigma, size=1)[0]
 
-    # roll = np.random.laplace(roll_mu, roll_sigma)
-    # while not roll_lower < roll < roll_upper:
-    #    roll = np.random.laplace(roll_mu, roll_sigma)
-
     vfov = 2 * getHalfFoV(sensor_size, focal_length)
 
     fl_px = focal_length / sensor_size
@@ -261,6 +257,3 @@ if __name__ == "__main__":
     with Pool(processes=4, initializer=randomize) as pool:
         for _ in list(tqdm(pool.imap_unordered(process, images), total=len(images))):
             pass
-
-    # for im_path in tqdm(images):
-    #    process(im_path)

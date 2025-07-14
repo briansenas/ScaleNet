@@ -8,12 +8,10 @@ import torch.distributed as dist
 import torch.nn as nn
 import utils.model_utils as model_utils
 import utils.vis_utils as vis_utils
-from maskrcnn_benchmark.utils.comm import get_rank
 from maskrcnn_benchmark.utils.comm import synchronize
 from tqdm import tqdm
 from utils.train_utils import reduce_loss_dict
-from utils.train_utils import sum_bbox_ratios
-from utils.utils_misc import *
+from utils.utils_misc import merge_list_of_lists
 
 
 def save_checkpoint(
@@ -138,10 +136,6 @@ def eval_epoch_cvpr_RCNN(
                 output_vfov = output_RCNN["output_vfov"]
 
                 if if_loss:
-                    # loss_horizon = nn.functional.kl_div(nn.functional.log_softmax(output_horizon, dim=1), horizon_dist_gt, reduction='batchmean')
-                    # loss_pitch = nn.functional.kl_div(nn.functional.log_softmax(output_pitch, dim=1), pitch_dist_gt, reduction='batchmean')
-                    # loss_roll = nn.functional.kl_div(nn.functional.log_softmax(output_roll, dim=1), roll_dist_gt, reduction='batchmean')
-                    # loss_vfov = nn.functional.kl_div(nn.functional.log_softmax(output_vfov, dim=1), vfov_dist_gt, reduction='batchmean')
                     loss_horizon = loss_func(output_horizon, horizon_idx_gt)
                     loss_pitch = loss_func(output_pitch, pitch_idx_gt)
                     loss_roll = loss_func(output_roll, roll_idx_gt)
@@ -330,30 +324,5 @@ def eval_epoch_cvpr_RCNN(
                             tid,
                             bins="doane",
                         )
-
-                        # writer.flush()
-
-    # if if_loss and scheduler is not None:
-    #     scheduler.step(eval_loss)
-    #
-    #     # Save checkpoint
-    #     is_best = False
-    #     if eval_loss < best_loss:
-    #         is_best = True
-    #         best_loss = eval_loss
-    #
-    #     # checkpoint = {
-    #     #      'epoch': epoch,
-    #     #      'tid': tid,
-    #     #      'state_dict': model.state_dict(),
-    #     #      'train_loss': train_loss,
-    #     #      'eval_loss': eval_loss,
-    #     #      'optimizer': optimizer.state_dict(),
-    #     # }
-    #     #
-    #     # save_checkpoint(checkpoint, is_best, epoch=epoch, tid=tid, checkpoint_path=checkpoint_path)
-    #     # del checkpoint
-    #
-    #     model.train()
 
     return return_dict_epoch
