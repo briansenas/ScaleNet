@@ -72,6 +72,9 @@ def setScene():
         prefs.compute_device = "CUDA_0"
 
         bpy.context.scene.cycles.device = "GPU"
+        bpy.context.scene.cycles.sample = 128
+        bpy.context.scene.cycles.use_adaptive_sampling = True
+        bpy.context.scene.cycles.use_denoising = True
         print("GPU render!")
     except:
         print("CPU render!")
