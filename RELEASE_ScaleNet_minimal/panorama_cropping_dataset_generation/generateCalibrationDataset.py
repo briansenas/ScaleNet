@@ -20,7 +20,7 @@ DEBUG = False
 DISPLAY = False
 
 input_dir = "data/ruizhu/SUN360/pano9104x4552"
-# output_dir = "/data/ruizhu/SUN360/crops_dataset_cvpr_myDistNarrowerLarge1105"
+# output_dir = "data/ruizhu/SUN360/crops_dataset_cvpr_myDistNarrowerLarge1105"
 output_dir = "data/ruizhu/SUN360/crops_dataset_cvpr_myDistWider20200403"
 
 os.makedirs(output_dir, exist_ok=True)
