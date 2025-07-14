@@ -14,6 +14,9 @@ from scipy.io import loadmat
 from scipy.stats import norm
 from termcolor import colored
 
+pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
+pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
+
 
 def getBins(minval, maxval, sigma, alpha, beta, kappa):
     """Remember, bin 0 = below value! last bin mean >= maxval"""
@@ -31,28 +34,28 @@ def getBins(minval, maxval, sigma, alpha, beta, kappa):
     return cumsum
 
 
+# # Maybe we can use DeepCalib to estimate the horizon and the camera parameters for the network inference.
 # def getHorizonLineFromAngles(pitch, roll, FoV, im_h, im_w):
 #     midpoint = getMidpointFromAngle(pitch, FoV)
 #     dh = getDeltaHeightFromRoll(roll, im_h, im_w)
 #     return midpoint + dh, midpoint - dh
-
-
+#
+#
 # def getMidpointFromAngle(pitch, FoV):
 #     return ( 0.5 + 0.5*np.tan(pitch) / np.tan(FoV/2) )
-
-
+#
+#
 # def getDeltaHeightFromRoll(roll, im_h, im_w):
 #     "The height distance of horizon from the midpoint at image left/right border intersection."""
 #     return im_w/im_h*np.tan(roll) / 2
-
-
+#
+#
 # def getOffset(pitch, roll, vFoV, im_h, im_w):
 #     hl, hr = getHorizonLineFromAngles(pitch, roll, vFoV, im_h, im_w)
 #     midpoint = (hl + hr) / 2.
 #     #slope = np.arctan(hr - hl)
 #     offset = (midpoint - 0.5) / np.sqrt( 1 + (hr - hl)**2 )
 #     return offset
-
 
 # def midpointpitch2bin(midpoint, pitch):
 #     if np.isnan(midpoint):
@@ -76,15 +79,15 @@ def getBins(minval, maxval, sigma, alpha, beta, kappa):
 #         return True, (pos - 32) / 192
 #
 #
-# def make_bins_layers_list(x_bins_lowHigh_list):
-#     x_bins_layers_list = []
-#     for layer_idx, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
-#         x_bins = np.linspace(x_bins_lowHigh[0], x_bins_lowHigh[1], 255)
-#         x_bins_centers = x_bins.copy()
-#         x_bins_centers[:-1] += np.diff(x_bins_centers) / 2
-#         x_bins_centers = np.append(x_bins_centers, x_bins_centers[-1])  # 42 bins
-#         x_bins_layers_list.append(x_bins_centers)
-#     return x_bins_layers_list
+def make_bins_layers_list(x_bins_lowHigh_list):
+    x_bins_layers_list = []
+    for layer_idx, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
+        x_bins = np.linspace(x_bins_lowHigh[0], x_bins_lowHigh[1], 255)
+        x_bins_centers = x_bins.copy()
+        x_bins_centers[:-1] += np.diff(x_bins_centers) / 2
+        x_bins_centers = np.append(x_bins_centers, x_bins_centers[-1])  # 42 bins
+        x_bins_layers_list.append(x_bins_centers)
+    return x_bins_layers_list
 
 
 # yc_bins_centers_1 = np.append(yc_bins_centers_1, yc_bins_centers_1[-1]) # 42 bins
