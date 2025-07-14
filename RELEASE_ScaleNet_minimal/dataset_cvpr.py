@@ -8,18 +8,16 @@ from glob import glob
 
 import numpy as np
 import torch
+from panorama_cropping_dataset_generation.debugging import getHorizonLine
 from PIL import Image
 from scipy.stats import norm
 from termcolor import colored
 
-sys.path.insert(
-    0,
-    "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/adobe_camera_calibration_cvpr18/panorama_cropping_dataset_generation",
-)
-# from debugging import getHorizonLine
-
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
+
+pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
+pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
 
 
 def getBins(minval, maxval, sigma, alpha, beta, kappa):
