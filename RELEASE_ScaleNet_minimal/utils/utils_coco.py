@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,6 +8,8 @@ from imageio import imread
 from imageio import imsave
 from PIL import Image
 from PIL import ImageDraw
+
+PATH = pathlib.Path(__file__).parent.resolve()
 
 
 def merge_bboxes(bboxes):
@@ -151,24 +154,18 @@ def drawLine(image, hl, hr, leftright=(None, None), color=(0, 255, 0), width=5):
     im = Image.fromarray(image)
     draw = ImageDraw.Draw(im)
 
-    # l = (1-hl)*h
-    # r = (1-hr)*h
     l = hl * h
     r = hr * h
 
     b = 0
-    # if leftright[0] is not None:
-    #    b = leftright[0]
-    # if leftright[1] is not None:
-    #    w = leftright[1]
 
     draw.line((b, l, w, r), fill=color, width=width)
     return np.array(im)
 
 
 def vis_yannick(yannick_results, image_file):
-    output_dir = "/home/ruizhu/tmpdir_adobe"
-
+    output_dir = os.path.join(PATH, "tmpdir_adobe")
+    os.makedirs(output_dir, exist_ok=True)
     horizon_visible = yannick_results["horizon_visible"][0][0]
     pitch = yannick_results["pitch"][0][0]
     roll = yannick_results["roll"][0][0]

@@ -34,39 +34,6 @@ def getBins(minval, maxval, sigma, alpha, beta, kappa):
     return cumsum
 
 
-# # Maybe we can use DeepCalib to estimate the horizon and the camera parameters for the network inference.
-# def getHorizonLineFromAngles(pitch, roll, FoV, im_h, im_w):
-#     midpoint = getMidpointFromAngle(pitch, FoV)
-#     dh = getDeltaHeightFromRoll(roll, im_h, im_w)
-#     return midpoint + dh, midpoint - dh
-#
-#
-# def getMidpointFromAngle(pitch, FoV):
-#     return ( 0.5 + 0.5*np.tan(pitch) / np.tan(FoV/2) )
-#
-#
-# def getDeltaHeightFromRoll(roll, im_h, im_w):
-#     "The height distance of horizon from the midpoint at image left/right border intersection."""
-#     return im_w/im_h*np.tan(roll) / 2
-#
-#
-# def getOffset(pitch, roll, vFoV, im_h, im_w):
-#     hl, hr = getHorizonLineFromAngles(pitch, roll, vFoV, im_h, im_w)
-#     midpoint = (hl + hr) / 2.
-#     #slope = np.arctan(hr - hl)
-#     offset = (midpoint - 0.5) / np.sqrt( 1 + (hr - hl)**2 )
-#     return offset
-
-# def midpointpitch2bin(midpoint, pitch):
-#     if np.isnan(midpoint):
-#         if pitch < 0:
-#             return np.digitize(pitch, pitch_bins_low)
-#         else:
-#             return np.digitize(pitch, pitch_bins_high) + 224
-#     assert 0 <= midpoint <= 1
-#     return int(midpoint*192) + 32
-
-
 def bin2midpointpitch(bins):
     pos = np.squeeze(bins.argmax(axis=-1))
     if pos < 31:
@@ -81,7 +48,7 @@ def bin2midpointpitch(bins):
 
 def make_bins_layers_list(x_bins_lowHigh_list):
     x_bins_layers_list = []
-    for layer_idx, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
+    for _, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
         x_bins = np.linspace(x_bins_lowHigh[0], x_bins_lowHigh[1], 255)
         x_bins_centers = x_bins.copy()
         x_bins_centers[:-1] += np.diff(x_bins_centers) / 2
@@ -90,12 +57,8 @@ def make_bins_layers_list(x_bins_lowHigh_list):
     return x_bins_layers_list
 
 
-# yc_bins_centers_1 = np.append(yc_bins_centers_1, yc_bins_centers_1[-1]) # 42 bins
-
-
 bins_lowHigh_list_dict = {}
 
-# yc_bins_lowHigh_list = [[0.5, 3.], [-0.3, 0.3], [-0.15, 0.15], [-0.15, 0.15], [-0.05, 0.05]] # 'SmallerBins'
 yc_bins_lowHigh_list = [
     [0.5, 5.0],
     [-0.3, 0.3],
@@ -103,7 +66,6 @@ yc_bins_lowHigh_list = [
     [-0.3, 0.3],
     [-0.15, 0.15],
 ]  # 'YcLargeBins'
-# yc_bins_lowHigh_list = [[0.5, 10.], [-0.5, 0.5], [-0.15, 0.15], [-0.3, 0.3], [-0.15, 0.15]] # 'YcLargerBinsV2'
 
 bins_lowHigh_list_dict["yc_bins_lowHigh_list"] = yc_bins_lowHigh_list
 yc_bins_layers_list = make_bins_layers_list(yc_bins_lowHigh_list)
@@ -200,11 +162,9 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
         write_split=False,
     ):
 
-        assert split in [
-            "train",
-            "val",
-            "test",
-        ], "wrong dataset split for COCO2017Scale!"
+        assert split in ["train", "val", "test"], (
+            "COCO2017Scale: Wrong dataset split: %s!" % split
+        )
         if split in ["train", "val"]:
             ann_file = (
                 "data/COCO/annotations/person_keypoints_train2017.json"  # !!!! tmp!
@@ -239,10 +199,6 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
         self.transforms_maskrcnn = transforms_maskrcnn
         self.transforms_yannick = transforms_yannick
         ts = time.time()
-        # try:
-        #     with open("filelist_spherical.json", "r") as fhdl:
-        #         self.data = json.load(fhdl)
-        # except FileNotFoundError:
         self.yannick_mat_files = glob(
             os.path.join(results_path_yannick, "*.mat"),
             recursive=True,
@@ -257,11 +213,7 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
         elif split == "val":
             self.yannick_mat_files = self.yannick_mat_files[-int(num_mat_files * 0.2) :]
         # I don't have the mat files, seems odd. It's a missing piece for the training dataset
-        # logger.info(self.yannick_mat_files[0])
-        # self.yannick_mat_files = self.yannick_mat_files[:100]
-        # with open("filelist_spherical.json", "w") as fhdl:
-        #     json.dump(self.data, fhdl)
-
+        logger.info(self.yannick_mat_files[0])
         if self.train:
             self.img_filenames = [
                 os.path.basename(yannick_mat_file).split(".")[0]
@@ -361,9 +313,6 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
                 ),
             )
 
-        # from scipy.io import savemat
-        # savemat('val_set.mat', {'img_files': self.img_files})
-
         if shuffle:
             random.seed(314159265)
             list_zip = list(
@@ -387,12 +336,6 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
                 == os.path.basename(self.pickle_files[0])[:12]
                 == os.path.basename(self.yannick_mat_files[0])[:12]
             )
-            # print(self.img_files[:2])
-            # print(self.bbox_npy_files[:2])
-        # if train:
-        #     self.data = self.data[:-2000]
-        # else:
-        #     self.data = self.data[-2000:]
 
         if not self.train:
             print([os.path.basename(img_file) for img_file in self.img_files[:12]])
@@ -400,7 +343,7 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
     def __getitem__(self, k):
         im_ori_RGB = Image.open(self.img_files[k]).convert(
             "RGB",
-        )  # im_ori_RGB.size: (W, H
+        )  # im_ori_RGB.size: (W, H)
         with open(self.pickle_files[k], "rb") as filehandle:
             data = pickle.load(filehandle)
         bboxes = data["bboxes"].astype(np.float32)  # [xywh]
@@ -411,7 +354,6 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
             labels = data["label"]  # ['car', 'person', 'person']
         else:
             labels = ["person"] * num_bboxes_ori
-        # bboxes = np.load(self.bbox_npy_files[k]).astype(np.float32) # [xywh]
         if bboxes.shape[0] > self.cfg.DATA.COCO.GOOD_NUM:
             bboxes = bboxes[: self.cfg.DATA.COCO.GOOD_NUM, :]
             labels = labels[: self.cfg.DATA.COCO.GOOD_NUM]
@@ -430,12 +372,7 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
                 kps_gt = [[0] * 51 for i in range(num_boxes)]
 
             target_keypoints = PersonKeypoints(kps_gt, im_ori_RGB.size)
-            # kps_sum = torch.sum(torch.sum(target_keypoints.keypoints[:, :, :2], 1), 1)
-            # kps_mask = kps_sum != 0.
-            # print(target_keypoints.keypoints.shape, kps_sum, kps_mask)
-
             target.add_field("keypoints", target_keypoints)
-            # target.add_field("keypoints_mask", kps_mask)
             target = target.clip_to_image(remove_empty=True)
             classes = [1] * num_boxes  # !!!!! all person (1) for now...
             classes = [self.json_category_id_to_contiguous_id[c] for c in classes]
@@ -446,12 +383,7 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
 
         W, H = im_ori_RGB.size[:2]
         if self.train:
-            # NOTE: The yannick mat files are some sort of camera parameters prediction
             yannick_results = loadmat(self.yannick_mat_files[k])
-            # horizon_visible = yannick_results["horizon_visible"][0][0].astype(
-            #     np.float32,
-            # )
-            # assert horizon_visible == 1
             horizon = yannick_results["pitch"][0][0].astype(np.float32)
             horizon_pixels_yannick = H * horizon
             v0 = H - horizon_pixels_yannick
@@ -466,12 +398,6 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
             im_ori_RGB,
             target,
         )  # [0., 1.] by default
-        # print('---', im.size(), np.asarray(im).shape)
-        # im_array = np.asarray(im)
-        # if len(im_array.shape)==2:
-        #     im_array = np.stack((im_array,)*3, axis=-1)
-        #     # print(im_array.shape)
-        # x = torch.from_numpy(im_array.transpose((2,0,1)))
 
         if self.train and self.opt.est_kps:
             target_maskrcnnTransform.add_field("keypoints_ori", target_keypoints)
@@ -482,12 +408,10 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
             y_person = 1.75
             bbox_good_list = bboxes
             vc = H / 2.0
-            inv_f2_yannick = 1.0 / (f_pixels_yannick * f_pixels_yannick)
             yc_list = []
             for bbox in bbox_good_list:
                 vt = H - bbox[1]
                 vb = H - (bbox[1] + bbox[3])
-                #     v0_single = yc * (vt - vb) / y_person + vb
                 yc_single = (
                     y_person
                     * (v0 - vb)
@@ -500,7 +424,6 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
             yc_estCam = -1
 
         assert len(labels) == bboxes.shape[0]
-        # im_ori_BGR_array = np.array(im_ori_RGB.copy())[:,:,::-1]
         return (
             im_yannickTransform,
             im_maskrcnnTransform,
@@ -547,18 +470,13 @@ def my_collate(batch):
         target_maskrcnnTransform_list,
         labels_list,
     ) = zip(*batch)
-    # input_yannickTransform = torch.stack(im_yannickTransform_list)
-    # input_maskrcnnTransform = torch.stack(im_maskrcnnTransform_list)
     W_batch_array = np.stack(W_batch_list).copy()
     H_batch_array = np.stack(H_batch_list).copy()
-    # yc_onehot_batch = torch.stack(yc_onehot_batch_list)
     yc_batch = torch.tensor(yc_batch_list)
     bboxes_batch_array = np.stack(bboxes_batch_list).copy()
     bboxes_length_batch_array = np.stack(bboxes_length_batch_list).copy()
     v0_batch = torch.tensor(v0_batch_list)
     f_pixels_yannick_batch = torch.tensor(f_pixels_yannick_batch_list)
-    # idx3_batch_list = [idx3.item() for idx3 in idx3_batch_list]
-    # idx3_batch = torch.tensor(idx3_batch_list)
     return (
         im_yannickTransform_list,
         im_maskrcnnTransform_list,
@@ -575,12 +493,6 @@ def my_collate(batch):
         labels_list,
     )
 
-    # # batch contains a list of tuples of structure (sequence, target)
-    # data = [item[0] for item in batch]
-    # data = pack_sequence(data, enforce_sorted=False)
-    # targets = [item[1] for item in batch]
-    # return [data, targets]
-
 
 def collate_fn_padd(batch):
     """
@@ -589,15 +501,6 @@ def collate_fn_padd(batch):
     note: it converts things ToTensor manually here since the ToTensor transform
     assume it takes in images rather than arbitrary tensors.
     """
-    # get sequence lengths
-    # lengths = torch.tensor([ t.shape[0] for t in batch ]).to(device)
-    # ## padd
-    # batch = [ torch.Tensor(t).to(device) for t in batch ]
-    # batch = torch.nn.utils.rnn.pad_sequence(batch)
-    # ## compute mask
-    # mask = (batch != 0).to(device)
-    # return batch, lengths, mask
-
     ims = [torch.Tensor(item[0]) for item in batch]
     bboxes = [torch.Tensor(item[1]) for item in batch]
     v0s = [torch.Tensor(np.asarray(item[2])) for item in batch]
@@ -606,46 +509,6 @@ def collate_fn_padd(batch):
     img_filepaths = [item[5] for item in batch]
 
     return [ims, bboxes, v0s, f_pixels_yannicks, img_filenames, img_filepaths]
-
-    # def __getitem__(self, k):
-    #     # with open(self.data[k][:-4] + ".json", "r") as fhdl:
-    #     #     data = json.load(fhdl)
-    #     #     data = data[2]
-
-    #     #im = np.asarray(imread(self.data[k].replace("_true_camera_calibration.json", ".jpg"))[:,:,:3])
-    #     im = Image.open(self.data[k])
-    #     #im = Image.open(self.data[k].replace("_true_camera_calibration.json", ".jpg"))
-
-    #     #hl_left, hl_right = getHorizonLineFromAngles(pitch=data["pitch"], roll=data["roll"], FoV=data["vfov"], im_h=im.size[0], im_w=im.size[1])
-    #     #slope = np.arctan(hl_right - hl_left)
-    #     #midpoint = (hl_left + hl_right) / 2
-    #     #offset = (midpoint - 0.5) / np.sqrt( 1 + (hl_right - hl_left)**2 )
-    #     #offset = getOffset(data["pitch"], data["roll"], data["vfov"], im.size[0], im.size[1])
-
-    #     #idx1 = midpointpitch2bin(, data["pitch"])
-    #     assert im.size[0] == data["width"]
-    #     idx1 = midpointpitch2bin(data["offset"] / data["height"], data["pitch"])
-    #     idx2 = np.digitize(data["roll"], roll_bins)
-    #     idx3 = np.digitize(data["vfov"], vfov_bins)
-    #     idx4 = np.digitize(data["spherical_distortion"], distortion_bins)
-    #     #print("{:.04f}".format(data["vfov"]), "{:.04f}".format(data["pitch"]), idx1)
-
-    #     y1 = np.zeros((256,), dtype=np.float32)
-    #     y2 = np.zeros((256,), dtype=np.float32)
-    #     y3 = np.zeros((256,), dtype=np.float32)
-    #     y4 = np.zeros((256,), dtype=np.float32)
-
-    #     if idx2 > 255 or idx1 > 255:
-    #         print(self.data[k], data["offset"] / im.size[0], data["pitch"], idx1, idx2, idx3, idx4)
-    #     y1[idx1] = y2[idx2] = y3[idx3] = y4[idx4] = 1.
-
-    #     #x = torch.from_numpy(im.transpose((2,0,1)))
-    # x = self.transforms(im)
-    #     y1, y2, y3, y4 = map(torch.from_numpy, (y1, y2, y3, y4))
-
-    #     return x, y1, y2, y3, y4, data
-
-    #     #{"angle units": "radians", "yaw": 0.0, "has_artifact": false, "has_day_sky": false, "source": "pano_aoijeqajukkoem", "pitch": 0.00492545270356224, "primary_top_content": "buildings or ceilings", "vfov": 0.9096217797805077, "roll": -0.01719714340875391}
 
 
 if __name__ == "__main__":

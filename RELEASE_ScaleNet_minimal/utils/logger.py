@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 
+
 def setup_logger(name, save_dir, distributed_rank, filename="log.txt"):
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
@@ -11,25 +12,26 @@ def setup_logger(name, save_dir, distributed_rank, filename="log.txt"):
         logger.setLevel(logging.ERROR)
         return logger
     ch = logging.StreamHandler(stream=sys.stdout)
-    # if distributed_rank > 0:
-    #     ch.setLevel(logging.WARNING)
-    # else:
     ch.setLevel(logging.INFO)
-    # formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s")
     formatter = logging.Formatter("%(name)s %(levelname)s: %(message)s")
 
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
     if save_dir:
-        fh = logging.FileHandler(os.path.join(save_dir, filename.replace('.txt', '_rank%d.txt'%distributed_rank)))
+        fh = logging.FileHandler(
+            os.path.join(
+                save_dir, filename.replace(".txt", "_rank%d.txt" % distributed_rank)
+            )
+        )
         fh.setLevel(logging.INFO)
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
     return logger
 
-class printer():
+
+class printer:
     """
     Main class for Generalized R-CNN. Currently supports boxes and masks.
     It consists of three main parts:

@@ -1,15 +1,25 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-from collections import OrderedDict
 import logging
+from collections import OrderedDict
 
 import torch
+from maskrcnn_benchmark.utils.comm import get_rank
+from maskrcnn_benchmark.utils.comm import synchronize
 from termcolor import colored
-from maskrcnn_benchmark.utils.comm import synchronize, get_rank
-# from maskrcnn_benchmark.utils.imports import import_file
 from utils.utils_misc import *
 
+# from maskrcnn_benchmark.utils.imports import import_file
 
-def align_and_update_state_dicts(model_state_dict, loaded_state_dict, logger=None, skip_kws=[], only_load_kws=[], replace_kws=[], replace_with_kws=[]):
+
+def align_and_update_state_dicts(
+    model_state_dict,
+    loaded_state_dict,
+    logger=None,
+    skip_kws=[],
+    only_load_kws=[],
+    replace_kws=[],
+    replace_with_kws=[],
+):
     """
     Strategy: suppose that the models that we will create will have prefixes appended
     to each of its keys, for example due to an extra level of nesting that the original
@@ -33,8 +43,13 @@ def align_and_update_state_dicts(model_state_dict, loaded_state_dict, logger=Non
 
     current_keys_renamed = current_keys.copy()
     if not (not replace_kws or not replace_with_kws):
-        print('>> replace_kws:', replace_kws, '>> replace_with_kws:', replace_with_kws)
-        assert len(replace_kws) == len(replace_with_kws) and len(replace_kws) > 0, 'Length of replace_kws %d and replace_with_kws %d should equal and > 0!'%(len(replace_kws), len(replace_with_kws))
+        print(">> replace_kws:", replace_kws, ">> replace_with_kws:", replace_with_kws)
+        assert (
+            len(replace_kws) == len(replace_with_kws) and len(replace_kws) > 0
+        ), "Length of replace_kws %d and replace_with_kws %d should equal and > 0!" % (
+            len(replace_kws),
+            len(replace_with_kws),
+        )
         # loaded_keys = [loaded_keys.replace('roi_heads.box', 'classifiers_head.head') for loaded_keys in loaded_keys]
 
         current_keys_filtered = []
@@ -43,7 +58,9 @@ def align_and_update_state_dicts(model_state_dict, loaded_state_dict, logger=Non
             for replace_kw, replace_with_kw in zip(replace_kws, replace_with_kws):
                 if replace_kw in current_key:
                     # print('--Rename', current_key, '--->', current_key.replace(replace_kw, replace_with_kw))
-                    current_keys_filtered.append(current_key.replace(replace_kw, replace_with_kw))
+                    current_keys_filtered.append(
+                        current_key.replace(replace_kw, replace_with_kw)
+                    )
                     if_replace = True
                     break
             if if_replace == False:
@@ -51,26 +68,32 @@ def align_and_update_state_dicts(model_state_dict, loaded_state_dict, logger=Non
             # current_keys = [current_keys.replace(replace_kw, replace_with_kw) for loaded_keys in loaded_keys]
         current_keys_renamed = current_keys_filtered.copy()
 
-
-    logger.warning('====== current_keys %d; loaded keys %d'%(len(current_keys), len(loaded_keys)))
-    # for a in sorted(current_keys_renamed):
-    #     print('-', a)
-    # for a in sorted(loaded_keys):
-    #     print('==', a)
-    # get a matrix of string matches, where each (i, j) entry correspond to the size of the
-    # loaded_key string, if it matches
+    logger.warning(
+        "====== current_keys %d; loaded keys %d" % (len(current_keys), len(loaded_keys))
+    )
     match_matrix = [
-        len(j) if i.replace('.layers', '').replace('RCNN.', '').endswith(j.replace('RCNN.', '').replace('.layers', '')) else 0 for i in current_keys_renamed for j in loaded_keys
+        (
+            len(j)
+            if i.replace(".layers", "")
+            .replace("RCNN.", "")
+            .endswith(j.replace("RCNN.", "").replace(".layers", ""))
+            else 0
+        )
+        for i in current_keys_renamed
+        for j in loaded_keys
     ]
     match_matrix = torch.as_tensor(match_matrix).view(
-        len(current_keys), len(loaded_keys)
+        len(current_keys),
+        len(loaded_keys),
     )
     max_match_size, idxs = match_matrix.max(1)
     # remove indices that correspond to no-match
     idxs[max_match_size == 0] = -1
 
     # used for logging
-    max_size = max([len(key) for key in current_keys_renamed]) if current_keys_renamed else 1
+    max_size = (
+        max([len(key) for key in current_keys_renamed]) if current_keys_renamed else 1
+    )
     max_size_loaded = max([len(key) for key in loaded_keys]) if loaded_keys else 1
     log_str_template = "{: <{}} <<LOADED FROM<< {: <{}} of shape {}"
     # logger = logging.getLogger(__name__)
@@ -111,16 +134,25 @@ def align_and_update_state_dicts(model_state_dict, loaded_state_dict, logger=Non
                     key_old,
                     max_size_loaded,
                     tuple(loaded_state_dict[key_old].shape),
-                )
+                ),
             )
         success_loads += 1
 
     if success_loads == all_possible_loads:
-        logger.warning(white_blue('====== Successfully loaded %d from %d possible loads.'%(success_loads, all_possible_loads)))
+        logger.warning(
+            white_blue(
+                "====== Successfully loaded %d from %d possible loads."
+                % (success_loads, all_possible_loads)
+            )
+        )
     else:
-        logger.warning(red('====== Successfully loaded %d from %d possible loads.'%(success_loads, all_possible_loads)))
-    return current_keys_ori , loaded_keys_ori
-
+        logger.warning(
+            red(
+                "====== Successfully loaded %d from %d possible loads."
+                % (success_loads, all_possible_loads)
+            )
+        )
+    return current_keys_ori, loaded_keys_ori
 
 
 def strip_prefix_if_present(state_dict, prefix):
@@ -133,13 +165,29 @@ def strip_prefix_if_present(state_dict, prefix):
     return stripped_state_dict
 
 
-def load_state_dict(model, loaded_state_dict, logger=None, skip_kws=[], only_load_kws=[], replace_kws=[], replace_with_kws=[]):
+def load_state_dict(
+    model,
+    loaded_state_dict,
+    logger=None,
+    skip_kws=[],
+    only_load_kws=[],
+    replace_kws=[],
+    replace_with_kws=[],
+):
     model_state_dict = model.state_dict()
     # if the state_dict comes from a model that was wrapped in a
     # DataParallel or DistributedDataParallel during serialization,
     # remove the "module" prefix before performing the matching
     loaded_state_dict = strip_prefix_if_present(loaded_state_dict, prefix="module.")
-    current_keys, loaded_keys = align_and_update_state_dicts(model_state_dict, loaded_state_dict, logger, skip_kws=skip_kws, only_load_kws=only_load_kws, replace_kws=replace_kws, replace_with_kws=replace_with_kws)
+    current_keys, loaded_keys = align_and_update_state_dicts(
+        model_state_dict,
+        loaded_state_dict,
+        logger,
+        skip_kws=skip_kws,
+        only_load_kws=only_load_kws,
+        replace_kws=replace_kws,
+        replace_with_kws=replace_with_kws,
+    )
 
     # use strict loading
     model.load_state_dict(model_state_dict)

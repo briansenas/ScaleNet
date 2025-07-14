@@ -16,6 +16,13 @@ from dataset_cvpr import roll_bins_centers
 from dataset_cvpr import vfov_bins_centers
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
+pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
+pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
+pitch_bins_v0_wide = np.concatenate(
+    (np.linspace(-1.5, 0.0, 31), np.linspace(0.0, 1.0, 193), np.linspace(1.0, 1.5, 32)),
+    0,
+)
+
 CATEGORIES = [
     "__background",
     "person",
@@ -100,24 +107,6 @@ CATEGORIES = [
     "toothbrush",
 ]
 
-# def approx_model_before_fix(input_dict):
-#     yc_est, vb, y_person, v0, vc, f_pixels_yannick = input_dict['yc_est'], input_dict['vb'], input_dict['y_person'], input_dict['v0'], input_dict['vc'], input_dict['f_pixels_yannick']
-#     inv_f2 = 1. / (f_pixels_yannick * f_pixels_yannick)
-#     vt_camEst = (yc_est * vb + y_person * (v0 - vb) * (1. + inv_f2 * (vc - v0) * vc)) / \
-#         (yc_est + y_person * (v0 - vb) * inv_f2 * (vc - v0))
-#     return vt_camEst
-#
-# def accu_model_before_fix(input_dict):
-#     yc_est, vb, y_person, v0, vc, f_pixels_yannick = input_dict['yc_est'], input_dict['vb'], input_dict['y_person'], input_dict['v0'], input_dict['vc'], input_dict['f_pixels_yannick']
-#     # theta_yannick =  2 * torch.atan((vc - v0) / (2. * f_pixels_yannick))
-#     theta_yannick =  torch.atan((vc - v0) / f_pixels_yannick)
-#     z =  (f_pixels_yannick * -yc_est) / (f_pixels_yannick * torch.sin(theta_yannick) - (vc - vb) * torch.cos(theta_yannick))
-#     vt_camEst = ((f_pixels_yannick * torch.cos(theta_yannick) + vc * torch.sin(theta_yannick)) * y_person \
-#         + (-f_pixels_yannick * torch.sin(theta_yannick) + vc * torch.cos(theta_yannick)) * z \
-#         + f_pixels_yannick * -yc_est) \
-#         / (y_person * torch.sin(theta_yannick) + z * torch.cos(theta_yannick))
-#     return vt_camEst
-
 
 def approx_model(input_dict):
     yc_est, vb, y_person, v0, vc, f_pixels_yannick = (
@@ -185,9 +174,6 @@ def accu_model(input_dict, if_debug=False):
                 vb,
             )
         negative_z = True
-        # print((f_pixels_yannick * torch.sin(theta_yannick) - (vc - vb) * torch.cos(theta_yannick)))
-    # print(vc)
-    # print(v0)
     vt_camEst = (
         (f_pixels_yannick * torch.cos(theta_yannick) + vc * torch.sin(theta_yannick))
         * y_person
@@ -225,9 +211,6 @@ def accu_model_helanyi(input_dict, if_debug=False):
     z = (-f * yc * cos + vc * yc * sin - (yc * sin) * vb) / (
         cos * vb - f * sin - vc * cos
     )
-    # print('---z', z)
-    # print('---z1', (-f * yc * cos + vc * yc * sin - (yc * sin)*vb))
-    # print('---z2', (cos * vb - f * sin - vc * cos))
     xyz = torch.tensor([[x], [y], [z], [1.0]]).to(device)
     u_vt_1 = intrinsics @ Rt @ xyz
     vt_camEst = u_vt_1[1] / u_vt_1[2]
@@ -235,7 +218,6 @@ def accu_model_helanyi(input_dict, if_debug=False):
 
 
 def accu_model_batch(input_dict, if_debug=False):
-    # negative_z = False
     yc_est, vb, y_person, v0, vc, f_pixels_yannick = (
         input_dict["yc_est"],
         input_dict["vb"],
@@ -244,29 +226,17 @@ def accu_model_batch(input_dict, if_debug=False):
         input_dict["vc"],
         input_dict["f_pixels_yannick"],
     )
-    # theta_yannick =  2 * torch.atan((vc - v0) / (2. * f_pixels_yannick))
     if "pitch_est" in input_dict:
         theta_yannick = input_dict["pitch_est"]
         if if_debug:
             print("Using pitch!", theta_yannick)
     else:
         theta_yannick = torch.atan((vc - v0) / f_pixels_yannick)
-    # if if_debug:
-    #     print('---theta_yannick', theta_yannick)
     z = -(f_pixels_yannick * yc_est) / (
         f_pixels_yannick * torch.sin(theta_yannick)
         - (vc - vb) * torch.cos(theta_yannick)
         + 1e-10
     )
-    # if if_debug:
-    #     print('---z', z)
-    # if z.detach().cpu().numpy() < 0:
-    #     if if_debug:
-    #         print('----z----=====', z, theta_yannick / np.pi * 180., f_pixels_yannick, yc_est, theta_yannick, vc, vb)
-    #     negative_z = True
-    # print((f_pixels_yannick * torch.sin(theta_yannick) - (vc - vb) * torch.cos(theta_yannick)))
-    # print(vc)
-    # print(v0)
     vt_camEst = (
         (f_pixels_yannick * torch.cos(theta_yannick) + vc * torch.sin(theta_yannick))
         * y_person
@@ -276,25 +246,6 @@ def accu_model_batch(input_dict, if_debug=False):
     ) / (y_person * torch.sin(theta_yannick) + z * torch.cos(theta_yannick) + 1e-10)
     negative_z = None
     return vt_camEst, z, negative_z
-
-
-# def accu_model_detach(input_dict):
-#     negative_z = False
-#     yc_est, vb, y_person, v0, vc, f_pixels_yannick = input_dict['yc_est'], input_dict['vb'], input_dict['y_person'], input_dict['v0'], input_dict['vc'], input_dict['f_pixels_yannick']
-#     # theta_yannick =  2 * torch.atan((vc - v0) / (2. * f_pixels_yannick))
-#     theta_yannick =  torch.atan((vc - v0.detach()) / f_pixels_yannick.detach())
-#     z =   - (f_pixels_yannick.detach() * yc_est.detach()) / (f_pixels_yannick.detach() * torch.sin(theta_yannick.detach()) - (vc - vb) * torch.cos(theta_yannick.detach()) + 1e-10)
-#     if z.detach().cpu().numpy() < 0:
-#         print('----z----=====', z, theta_yannick / np.pi * 180., f_pixels_yannick, yc_est, theta_yannick, vc, vb)
-#         negative_z = True
-#         # print((f_pixels_yannick * torch.sin(theta_yannick) - (vc - vb) * torch.cos(theta_yannick)))
-#     # print(vc)
-#     # print(v0)
-#     vt_camEst = ((f_pixels_yannick * torch.cos(theta_yannick) + vc * torch.sin(theta_yannick)) * y_person \
-#         + (-f_pixels_yannick * torch.sin(theta_yannick) + vc * torch.cos(theta_yannick)) * z \
-#         + -f_pixels_yannick * yc_est) \
-#         / (y_person * torch.sin(theta_yannick) + z * torch.cos(theta_yannick) + 1e-10)
-#     return vt_camEst, negative_z
 
 
 def get_pitch_est_bad(
@@ -307,17 +258,6 @@ def get_pitch_est_bad(
     vfov_estim,
     f_estim,
 ):
-    # all_pitch_bins_centers = torch.cat((
-    #     torch.from_numpy(pitch_bins_low).float().to(device),
-    #     # 2*torch.tan(vfov_estim[idx]/2)*(torch.arange(0, 193).float().to(device)/192 - 0.5),
-    #     torch.arange(0, 193).float().to(device)/192,
-    #     torch.from_numpy(pitch_bins_high).float().to(device),
-    #     torch.Tensor([np.pi/6]).float().to(device)))
-    # return all_pitch_bins_centers
-    # pitch_bins_low_device_batch = pitch_bins_low_device.unsqueeze(0).repeat(batchsize, 1)
-    # pitch_bins_mid_device_batch = pitch_bins_mid_device.unsqueeze(0).repeat(batchsize, 1)
-    # pitch_bins_high_device_batch = pitch_bins_high_device.unsqueeze(0).repeat(batchsize, 1)
-    # print(H_batch.shape, f_estim.shape)
     half_fov_batch = (vfov_estim / 2.0).unsqueeze(-1)
     pitch_bins_low_device_batch_v0 = 0.5 - torch.tan(
         -pitch_bins_low_device_batch,
@@ -327,11 +267,9 @@ def get_pitch_est_bad(
     ) * f_estim.unsqueeze(-1) / H_batch.unsqueeze(-1)
     pitch_bins_mid_device_batch_v0 = pitch_bins_mid_device_batch
 
-    # expectation_pitch_bins_low_device_batch_v0 = pitch_bins_low_device_batch_v0 * output_pitch[:, :pitch_bins_low_device_batch.shape[0]]
     low_dims = pitch_bins_low_device_batch.shape[1]
     mid_dims = pitch_bins_mid_device_batch.shape[1]
     high_dims = pitch_bins_high_device_batch.shape[1]
-    # print(output_pitch[:, :low_dims].shape, output_pitch[:, -high_dims:].shape, output_pitch[:, low_dims:(low_dims+mid_dims)].shape)
     expectation_pitch_bins_low_device_batch_v0 = (
         torch.exp(nn.functional.log_softmax(output_pitch[:, :low_dims], dim=1))
         * pitch_bins_low_device_batch_v0
@@ -350,9 +288,6 @@ def get_pitch_est_bad(
         * pitch_bins_high_device_batch_v0
     ).sum(dim=1)
 
-    # print(pitch_bins_low_device_batch_v0.detach().cpu().numpy())
-    # print(pitch_bins_mid_device_batch.detach().cpu().numpy())
-    # print(pitch_bins_high_device_batch_v0.detach().cpu().numpy())
     expectation_batch_v0 = (
         (torch.argmax(output_pitch, dim=1) < 31).float()
         * expectation_pitch_bins_low_device_batch_v0
@@ -364,9 +299,6 @@ def get_pitch_est_bad(
         )
         * expectation_pitch_bins_mid_device_batch_v0
     )
-    # print(torch.argmax(output_pitch, dim=1) < 31)
-    # print(torch.argmax(output_pitch, dim=1) >=224)
-    # print((torch.argmax(output_pitch, dim=1) >= 31).float() * (torch.argmax(output_pitch, dim=1) < 224).float())
     return expectation_batch_v0
 
 
@@ -380,18 +312,6 @@ def get_pitch_est(
     vfov_estim,
     f_estim,
 ):
-    # fixPitchMidOnly
-    # all_pitch_bins_centers = torch.cat((
-    #     torch.from_numpy(pitch_bins_low).float().to(device),
-    #     # 2*torch.tan(vfov_estim[idx]/2)*(torch.arange(0, 193).float().to(device)/192 - 0.5),
-    #     torch.arange(0, 193).float().to(device)/192,
-    #     torch.from_numpy(pitch_bins_high).float().to(device),
-    #     torch.Tensor([np.pi/6]).float().to(device)))
-    # return all_pitch_bins_centers
-    # pitch_bins_low_device_batch = pitch_bins_low_device.unsqueeze(0).repeat(batchsize, 1)
-    # pitch_bins_mid_device_batch = pitch_bins_mid_device.unsqueeze(0).repeat(batchsize, 1)
-    # pitch_bins_high_device_batch = pitch_bins_high_device.unsqueeze(0).repeat(batchsize, 1)
-    # print(H_batch.shape, f_estim.shape)
     half_fov_batch = (vfov_estim / 2.0).unsqueeze(-1)
     pitch_bins_low_device_batch_v0 = 0.5 - torch.tan(
         -pitch_bins_low_device_batch,
@@ -424,18 +344,11 @@ def get_pitch_est(
         * pitch_bins_high_device_batch_v0
     ).sum(dim=1)
 
-    # print(pitch_bins_low_device_batch_v0.detach().cpu().numpy())
-    # print(pitch_bins_mid_device_batch.detach().cpu().numpy())
-    # print(pitch_bins_high_device_batch_v0.detach().cpu().numpy())
-    # expectation_batch_v0 = (torch.argmax(output_pitch, dim=1) < 31).float() * expectation_pitch_bins_low_device_batch_v0 + \
-    #     (torch.argmax(output_pitch, dim=1) >=224).float() * expectation_pitch_bins_high_device_batch_v0 + \
-    #     ((torch.argmax(output_pitch, dim=1) >= 31).float() * (torch.argmax(output_pitch, dim=1) < 224).float()) * expectation_pitch_bins_mid_device_batch_v0
     expectation_batch_v0 = expectation_pitch_bins_mid_device_batch_v0
     return expectation_batch_v0
 
 
 def get_pitch_est_v0(bins, output_pitch, H_batch, vfov_estim, f_estim):
-    # v0FixYannick
     # half_fov_batch = (vfov_estim / 2.).unsqueeze(-1)
     pitch_bins_low_device_batch_v0 = 0.5 - torch.tan(
         -bins["pitch_bins_low_device_batch"],
@@ -455,9 +368,6 @@ def get_pitch_est_v0(bins, output_pitch, H_batch, vfov_estim, f_estim):
         ),
         dim=1,
     )
-    # np.set_printoptions(precision=3, suppress=True)
-    # print(pitch_bins_device_batch_v0[0].detach().cpu().numpy())
-
     expectation_batch_v0 = (
         torch.exp(nn.functional.log_softmax(output_pitch, dim=1))
         * pitch_bins_device_batch_v0
@@ -466,17 +376,10 @@ def get_pitch_est_v0(bins, output_pitch, H_batch, vfov_estim, f_estim):
 
 
 def get_pitch_est_v0_mid(bins, output_pitch, H_batch, vfov_estim, f_estim):
-    # v0FixYannick
-    # half_fov_batch = (vfov_estim / 2.).unsqueeze(-1)
-    # pitch_bins_low_device_batch_v0 = 0.5 - torch.tan(- bins['pitch_bins_low_device_batch']) * f_estim.unsqueeze(-1) / H_batch.unsqueeze(-1)
-    # pitch_bins_high_device_batch_v0 = 0.5 + torch.tan(bins['pitch_bins_high_device_batch']) * f_estim.unsqueeze(-1) / H_batch.unsqueeze(-1)
     pitch_bins_mid_device_batch_v0 = bins["pitch_bins_mid_device_batch"].repeat(
         output_pitch.shape[0],
         1,
     )
-    # pitch_bins_device_batch_v0 = torch.cat((pitch_bins_low_device_batch_v0, pitch_bins_mid_device_batch_v0, pitch_bins_high_device_batch_v0), dim=1)
-    # np.set_printoptions(precision=3, suppress=True)
-    # print(pitch_bins_device_batch_v0[0].detach().cpu().numpy())
 
     expectation_batch_v0 = (
         torch.exp(nn.functional.log_softmax(output_pitch[:, 31:224], dim=1))
@@ -519,24 +422,12 @@ def get_pitch_radian_est_yannick(bins, output_pitch):
 
 
 def bin_mid_2midpointpitch(bins):
-    # print(bins, bins.shape)
     pos = bins.argmax(dim=-1).float()
-    # print(pos, pos.shape, bins.argmax(axis=-1).shape)
-    # if pos < 31:
-    #     return False, pitch_bins_low[pos]
-    # elif pos == 255:
-    #     return False, np.pi/6
-    # elif pos >= 224:
-    #     return False, pitch_bins_high[pos - 224]
-    # else:
-    #     return True, (pos - 32)/192
     return pos / 192.0
 
 
 def get_bins(device):
     vfov_bins_centers_torch = torch.from_numpy(vfov_bins_centers).float().to(device)
-    # roll_bins_centers_torch = torch.from_numpy(roll_bins_centers).float().to(device)
-    # distortion_bins_centers_torch = torch.from_numpy(distortion_bins_centers).float().to(device)
 
     yc_bins_centers_torch = torch.from_numpy(yc_bins_centers).float().to(device)
     human_bins_torch = torch.from_numpy(human_bins).float().to(device)
@@ -571,11 +462,6 @@ def get_bins(device):
 
 def get_bins_combine(device):
     bins_return = bins_lowHigh_list_dict.copy()
-    # bins_return = {}
-    # for key in bins_lowHigh_list_dict.keys():
-    #     bins_lowHigh_list = bins_lowHigh_list_dict[key]
-    #     bins_lowHigh_torch = torch.from_numpy(np.asarray(bins_lowHigh_list, dtype=np.float32)).to(device)
-    #     bins_return.update({key: bins_lowHigh_torch})
 
     vfov_bins_centers_torch = torch.from_numpy(vfov_bins_centers).float().to(device)
     roll_bins_centers_torch = torch.from_numpy(roll_bins_centers).float().to(device)
@@ -587,11 +473,6 @@ def get_bins_combine(device):
     yc_bins_centers_torch = torch.from_numpy(yc_bins_centers).float().to(device)
     human_bins_torch = torch.from_numpy(human_bins).float().to(device)
     car_bins_torch = torch.from_numpy(car_bins).float().to(device)
-
-    # yc_bins_centers_0_torch = torch.from_numpy(yc_bins_centers_0).float().to(device)
-    # yc_bins_centers_1_torch = torch.from_numpy(yc_bins_centers_1).float().to(device)
-
-    # human_bins_1_torch = torch.from_numpy(human_bins_1).float().to(device)
 
     yc_bins_layers_list_torch = [
         torch.from_numpy(yc_bins_layer).float().to(device)
@@ -678,15 +559,3 @@ def human_prior(tensor, mean=1.70, std=0.103):
         / np.sqrt(2.0 * np.pi * (std**2))
         * torch.exp(-((tensor - mean) ** 2) / (2.0 * std**2))
     )
-
-
-# def recursive_batch_norm_update(child):
-#
-#     if type(child) == [torch.nn.BatchNorm1d, torch.nn.BatchNorm2d, torch.nn.BatchNorm3d]:
-#         child.momentum = 0.01
-#         return
-#
-#     for children in child.children():
-#         lowest_child = recursive_layer(children)
-#
-#     return

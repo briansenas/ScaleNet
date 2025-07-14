@@ -1,6 +1,7 @@
 import logging
 import ntpath
 import os
+import pathlib
 import random
 import string
 
@@ -18,9 +19,10 @@ from matplotlib.patches import Rectangle
 from panorama_cropping_dataset_generation.debugging import showHorizonLine
 from panorama_cropping_dataset_generation.debugging import showHorizonLineFromHorizon
 from PIL import Image
-from PIL import ImageDraw
 from scipy.special import softmax
 from utils.utils_misc import *
+
+PATH = pathlib.Path(__file__).parent.resolve()
 
 
 def show_cam_bbox(
@@ -58,14 +60,13 @@ def show_cam_bbox(
         add_yc_list_str = "(%s)" % (
             ", ".join(["%.2f" % yc_est for yc_est in input_dict["yc_est_list"]])
         )
-        # print(input_dict['yc_est_list'], add_yc_list_str)
     else:
         add_yc_list_str = ""
 
     if "f_pixels_est_mm_list" in input_dict:
         add_fmm_list_str = "(%s)" % (
             ", ".join(
-                ["%.2f" % fmm_est for fmm_est in input_dict["f_pixels_est_mm_list"]]
+                ["%.2f" % fmm_est for fmm_est in input_dict["f_pixels_est_mm_list"]],
             )
         )
     else:
@@ -76,7 +77,6 @@ def show_cam_bbox(
             ", ".join(["%.2f" % v0_est for v0_est in input_dict["v0_est_list"]])
         )
         add_v0_list_str = "v0=%.2f" % sum(input_dict["v0_est_list"]) + add_v0_list_str
-        # print(input_dict['yc_est_list'], add_yc_list_str)
     else:
         add_v0_list_str = ""
 
@@ -225,18 +225,19 @@ def show_cam_bbox(
                     [
                         vt_camEst_N_delta_layer[sample_idx]
                         for vt_camEst_N_delta_layer in vt_camEst_N_delta_list
-                    ]
+                    ],
                 )
             if not if_not_detail:
                 for bbox, vt_camEst_person_delta_person_layers in zip(
-                    input_dict["bbox_gt"], vt_camEst_N_delta_list_sample
+                    input_dict["bbox_gt"],
+                    vt_camEst_N_delta_list_sample,
                 ):
                     add_vt_camEst_person_delta_person_list_str = "(%s)" % (
                         ", ".join(
                             [
                                 "%.2f" % vt_camEst_person_delta_person
                                 for vt_camEst_person_delta_person in vt_camEst_person_delta_person_layers
-                            ]
+                            ],
                         )
                     )
                     plt.text(
@@ -265,10 +266,12 @@ def show_cam_bbox(
                     [
                         person_hs_est_layer[sample_idx]
                         for person_hs_est_layer in person_hs_est_list
-                    ]
+                    ],
                 )
             for y_person, bbox, y_person_layers in zip(
-                input_dict["bbox_h"], input_dict["bbox_gt"], person_hs_est_list_sample
+                input_dict["bbox_h"],
+                input_dict["bbox_gt"],
+                person_hs_est_list_sample,
             ):
                 if not if_not_detail:
                     add_y_person_list_str = "(%s)" % (
@@ -279,7 +282,7 @@ def show_cam_bbox(
                 plt.text(
                     bbox[0],
                     bbox[1],
-                    "%.2f %s" % (y_person, add_y_person_list_str),
+                    f"{y_person:.2f} {add_y_person_list_str}",
                     fontsize=7,
                     bbox=dict(facecolor="white", alpha=0.5),
                 )
@@ -309,17 +312,6 @@ def show_cam_bbox(
                 color="white",
                 bbox=dict(facecolor="b", alpha=0.5),
             )
-
-    # if 'vfov_est' in input_dict:
-    #     pitch = input_dict_show['pitch_est_yannick']
-    #     vfov = input_dict_show['vfov_est']
-    #     ctr = H*( 0.5 - 0.5*np.tan(pitch) / np.tan(vfov/2) )
-    #     plt.plot([W/4., W/4.*3.], [ctr, ctr], linestyle='-.', linewidth=2, color='royalblue')
-    #     # l = ctr - w*np.tan(roll)/2
-    #     # r = ctr + w*np.tan(roll)/2
-    #     # if debug:
-    #     #     draw.text((0, 0), "vfov:{0:.2f}, pitch:{1:.2f}, roll:{2:.2f}, f_mm:{3:.2f}".format(vfov*180/np.pi, pitch*180/np.pi, roll*180/np.pi, focal_length), (255, 255, 255))
-    #     # draw.line((0, l, w, r), fill=color, width=width)
 
     if "v0_batch_from_pitch_vfov" in input_dict:
         v0_batch_from_pitch_vfov = input_dict_show["v0_batch_from_pitch_vfov"]
@@ -360,12 +352,12 @@ def show_cam_bbox(
         camH_bins = input_dict["camH_bins"]
         ax3 = fig.add_subplot(gs[3, 1])
         vis_output_softmax_argmax(
-            output_camH, camH_bins, ax3, title="camH-" + input_dict["reduce_method"]
+            output_camH,
+            camH_bins,
+            ax3,
+            title="camH-" + input_dict["reduce_method"],
         )
 
-    # plt.axis('off')
-    # ax1.set_xlim(0, W)
-    # ax1.set_xlim(0, H)
     if if_show and not if_return:
         plt.show()
         print("plt.show()")
@@ -377,8 +369,6 @@ def show_cam_bbox(
         fig.savefig(vis_path)
         if idx_sample == 0:
             print("Vis saved to " + vis_path)
-        # npy_path = os.path.join(save_path, 'zzNpy-' + save_name+'.npy')
-        # np.save(npy_path, input_dict_show)
 
     if if_return:
         return fig, ax1
@@ -396,7 +386,11 @@ def vis_output_softmax_argmax(output_camH, camH_bins, ax, title=""):
     plt.plot([camH_argmax, camH_argmax], [0, camH_max_prob * 1.05])
     plt.grid()
     ax.set_title(
-        "%s: softmax %.2f, argmax %.2f" % (title, camH_softmax_estim, camH_argmax),
+        "{}: softmax {:.2f}, argmax {:.2f}".format(
+            title,
+            camH_softmax_estim,
+            camH_argmax,
+        ),
         fontsize="small",
     )
 
@@ -419,7 +413,7 @@ def show_box_kps(
     predictions_override=None,
 ):
     image_sizes_ori = [
-        (input_dict_show["W_batch_array"], input_dict_show["H_batch_array"])
+        (input_dict_show["W_batch_array"], input_dict_show["H_batch_array"]),
     ]
     if predictions_override is None:
         if (
@@ -432,19 +426,24 @@ def show_box_kps(
         predictions = predictions_override
     if opt.distributed:
         prediction_list, prediction_list_ori = model.module.RCNN.post_process(
-            predictions, image_sizes_ori
+            predictions,
+            image_sizes_ori,
         )
         image_batch_list_ori = [img]
         result_list, top_prediction_list = model.module.RCNN.select_and_vis_bbox(
-            prediction_list_ori, image_batch_list_ori
+            prediction_list_ori,
+            image_batch_list_ori,
         )
     else:
         prediction_list, prediction_list_ori = model.RCNN.post_process(
-            predictions, image_sizes_ori
+            predictions,
+            image_sizes_ori,
         )
         image_batch_list_ori = [img]
         result_list, top_prediction_list = model.RCNN.select_and_vis_bbox(
-            prediction_list_ori, image_batch_list_ori, select_top=select_top
+            prediction_list_ori,
+            image_batch_list_ori,
+            select_top=select_top,
         )
     input_dict_show["result_list_pose"] = result_list
     target_list = [input_dict_show["target_maskrcnnTransform_list"]]
@@ -455,7 +454,7 @@ def show_box_kps(
         fig = plt.figure(figsize=(10 * figzoom, 10 * figzoom))
         plt.imshow(result)
         plt.title(
-            "[%d-%s]" % (input_dict_show["tid"], input_dict_show["im_filename"][-6:])
+            "[%d-%s]" % (input_dict_show["tid"], input_dict_show["im_filename"][-6:]),
         )
         # ax = plt.gca()
         # for bbox_gt in bboxes_gt:
@@ -506,10 +505,6 @@ def vis_SUN360(
     prepostfix="",
     idx_sample=0,
 ):
-    # if not(epoch != 0 and epoch != epoch_start and not opt.not_val and epoch not in epochs_evaled):
-    # if not(not opt.not_val and (epoch < opt.save_every_epoch or epoch % opt.save_every_epoch == 0) and epoch not in epochs_evaled):
-    #     return
-
     if logger is None:
         logger = logging.getLogger("vis_SUN360")
 
@@ -531,7 +526,6 @@ def vis_SUN360(
         pitch_disc = output_pitch[idx].detach().cpu().numpy().squeeze()
         roll_disc = output_roll[idx].detach().cpu().numpy().squeeze()
         vfov_disc = output_vfov[idx].detach().cpu().numpy().squeeze()
-        # distortion_disc = distortion_disc.detach().cpu().numpy().squeeze()
         vfov_disc[..., 0] = -35
         vfov_disc[..., -1] = -35
 
@@ -539,10 +533,9 @@ def vis_SUN360(
         pitch = bins2pitch(pitch_disc)
         roll = bins2roll(roll_disc)
         vfov = bins2vfov(vfov_disc)
-        h, w = im.size
+        h, _ = im.size
         f_pix = h / 2.0 / np.tan(vfov / 2.0)
         sensor_size = sensor_size_num[idx]
-        # sensor_size = 24 # !!!!!!
         f_mm = f_pix / h * sensor_size
 
         horizon_list.append(horizon)
@@ -551,15 +544,23 @@ def vis_SUN360(
         vfov_list.append(vfov)
         f_mm_list.append(f_mm)
 
-        # horizon_from_pitch = 0.5 - 0.5*np.tan(pitch) / np.tan(vfov/2)
-
         if if_vis:
             im2 = np.asarray(im).copy()
             im2, _ = showHorizonLine(
-                im2, vfov, pitch, 0.0, focal_length=f_mm, color=(0, 0, 255), width=4
+                im2,
+                vfov,
+                pitch,
+                0.0,
+                focal_length=f_mm,
+                color=(0, 0, 255),
+                width=4,
             )  # Blue: horizon converted from camera params WITHOUT roll
             im2 = showHorizonLineFromHorizon(
-                im2, horizon, color=(255, 255, 0), width=4, debug=True
+                im2,
+                horizon,
+                color=(255, 255, 0),
+                width=4,
+                debug=True,
             )  # Yellow: est horizon v0
 
             horizon_gt = horizon_num[idx]
@@ -568,7 +569,12 @@ def vis_SUN360(
             vfov_gt = vfov_num[idx]
             f_gt = f_num[idx]
             im2 = showHorizonLineFromHorizon(
-                im2, horizon_gt, color=(255, 255, 255), width=3, debug=True, GT=True
+                im2,
+                horizon_gt,
+                color=(255, 255, 255),
+                width=3,
+                debug=True,
+                GT=True,
             )  # White: GT horizon without roll
             im2, _ = showHorizonLine(
                 im2,
@@ -601,7 +607,7 @@ def vis_SUN360(
                     + postfix
                     + "-"
                     + ntpath.basename(im_paths[idx])
-                    + "-f%.2f-GT%.2f.jpg" % (f_mm, f_gt),
+                    + f"-f{f_mm:.2f}-GT{f_gt:.2f}.jpg",
                 )
                 imsave(im_save_path, im2)
                 if idx_sample == 0:
@@ -633,17 +639,20 @@ def blender_render(
 ):
 
     tmp_code = "".join(
-        [random.choice(string.ascii_letters + string.digits) for n in range(32)]
+        [random.choice(string.ascii_letters + string.digits) for n in range(32)],
     )
 
-    currentdir = "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux"
-
-    blender_path = "/home/ruizhu/Downloads/blender-2.79b-linux-glibc219-x86_64/blender"
+    currentdir = PATH
+    blender_path = "/snap/bin/blender"
     # scene_path = currentdir + '/rendering/scene_cone.blend'
-    scene_path = currentdir + "/rendering/scene_chair_fix.blend"
+    scene_path = os.path.join(currentdir, os.pardir, "rendering/scene_chair_fix.blend")
     # script_path = currentdir + '/rendering/render_coco_rui.py'
     # script_path = currentdir + '/rendering/render_coco_rui_chair.py'
-    script_path = currentdir + "/rendering/render_coco_rui_chair_all_fix.py"
+    script_path = os.path.join(
+        currentdir,
+        os.pardir,
+        "rendering/render_coco_rui_cylinder_all_fix_final.py",
+    )
     # render_file = currentdir + '/rendering/render/render_0.png'
 
     insertion_points_xy_list = []
@@ -653,16 +662,15 @@ def blender_render(
         #         insertion_points_xy_list.append([bbox[0]+bbox[2]/2., bbox[1]+bbox[3]])
         insertion_points_xy_list.append([bbox[0], bbox[1] + bbox[3]])
 
-    # insertion_points_xy_list = insertion_points_xy_list[:1]
-    npy_path = "/home/ruizhu/tmp_insert_pts_" + tmp_code
+    temp_folder = os.path.join(currentdir, "temp")
+    os.makedirs(temp_folder, exist_ok=True)
+    npy_path = os.path.join(temp_folder, "tmp_insert_pts_" + tmp_code)
     np.save(npy_path, insertion_points_xy_list)
     bbox_hs_list = [a.item() for a in input_dict_show["bbox_h"]]
-    npy_path = "/home/ruizhu/tmp_bbox_hs_" + tmp_code
+    npy_path = os.path.join(temp_folder, "tmp_bbox_hs_" + tmp_code)
     np.save(npy_path, bbox_hs_list)
 
     im_filepath = im_file[0]
-    # W = W_batch_array[0]
-    # H = H_batch_array[0]
     im_ori = plt.imread(im_filepath)
     H, W = im_ori.shape[:2]
     insertion_points_x = -1
@@ -675,10 +683,7 @@ def blender_render(
 
     print("======blender, h_cam: %.2f" % h_cam)
 
-    #     if replace_v0_01 is not None:
-    #         ppitch = np.arctan((replace_v0_01 - 0.5) / 0.5 * np.tan(vvfov/2.))
-
-    rendering_command = "%s %s --background --python %s" % (
+    rendering_command = "{} {} --background --python {}".format(
         blender_path,
         scene_path,
         script_path,
@@ -699,11 +704,13 @@ def blender_render(
         )
     )
     rendering_command = rendering_command + rendering_command_append
-    #     print(rendering_command)
 
     os.system(rendering_command)
 
-    render_file = currentdir + "/rendering/render/render_all_%s.png" % tmp_code
+    render_file = os.path.join(
+        currentdir,
+        "rendering/render/render_all_%s.png" % tmp_code,
+    )
 
     if if_show == False:
         plt.ioff()
@@ -712,7 +719,7 @@ def blender_render(
     def full_frame(width=None, height=None):
         mpl.rcParams["savefig.pad_inches"] = 0
         figsize = None if width is None else (width, height)
-        fig = plt.figure(figsize=figsize)
+        _ = plt.figure(figsize=figsize)
         ax = plt.axes([0, 0, 1, 1], frameon=False)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -727,7 +734,6 @@ def blender_render(
     ax = plt.gca()
     ax.set_axis_off()
     plt.autoscale(tight=True)
-    #     plt.savefig(save_path + '/%s_noBbox.jpg'%(save_name), dpi = 100, bbox_inches='tight')
 
     input_dict = input_dict_show
     if "bbox_gt" in input_dict:
@@ -801,7 +807,7 @@ def blender_render_reverse(
     input_dict_show,
     output_RCNN,
     im_file,
-    save_path="./",
+    save_path="./temp",
     if_show=False,
     idx=0,
     save_name="",
@@ -812,20 +818,29 @@ def blender_render_reverse(
 ):
 
     tmp_code = "".join(
-        [random.choice(string.ascii_letters + string.digits) for n in range(32)]
+        [random.choice(string.ascii_letters + string.digits) for n in range(32)],
     )
-
-    currentdir = "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux"
-    blender_path = "/home/ruizhu/Downloads/blender-2.79b-linux-glibc219-x86_64/blender"
+    os.makedirs(save_path, exist_ok=True)
+    currentdir = PATH
+    blender_path = "/snap/bin/blender"
     # scene_path = currentdir + '/rendering/scene_cone.blend'
-    scene_path = currentdir + "/rendering/scene_chair_fix.blend"
+    scene_path = os.path.join(currentdir, os.pardir, "rendering/scene_chair_fix.blend")
     # script_path = currentdir + '/rendering/render_coco_rui.py'
     # script_path = currentdir + '/rendering/render_coco_rui_chair.py'
-    script_path = currentdir + "/rendering/render_coco_rui_chair_all_fix.py"
+    script_path = os.path.join(
+        currentdir,
+        os.pardir,
+        "rendering/render_coco_rui_cylinder_all_fix_final.py",
+    )
     # render_file = currentdir + '/rendering/render/render_0.png'
 
-    render_file = currentdir + "/rendering/render/render_all_%s.png" % tmp_code
-    reproj_file = currentdir + "/rendering/render/render_all_%s_reproj.png" % tmp_code
+    render_file = os.path.join(
+        currentdir,
+        "/rendering/render/render_all_%s.png" % tmp_code,
+    )
+    reproj_file = os.path.join(
+        currentdir + "/rendering/render/render_all_%s_reproj.png" % tmp_code,
+    )
     from os import path
 
     if path.exists(render_file):
@@ -837,26 +852,20 @@ def blender_render_reverse(
         plt.ioff()
     insertion_points_xy_list = []
     bboxes_filter = input_dict_show["bbox_gt"]
-    # bboxes_filter = [bboxes_filter[0]]
     for bbox in bboxes_filter:
-        #         insertion_points_xy_list.append([bbox[0]+bbox[2]/2., bbox[1]+bbox[3]])
         insertion_points_xy_list.append([bbox[0], bbox[1] + bbox[3]])
 
-    # insertion_points_xy_list = insertion_points_xy_list[:1]
-    npy_path = "/home/ruizhu/tmp_insert_pts_" + tmp_code
+    temp_folder = os.path.join(currentdir, "temp")
+    os.makedirs(temp_folder, exist_ok=True)
+    npy_path = os.path.join(temp_folder, "tmp_insert_pts_" + tmp_code)
     np.save(npy_path, insertion_points_xy_list)
     bbox_hs_list = [a.item() for a in input_dict_show["bbox_h"]]
-    npy_path = "/home/ruizhu/tmp_bbox_hs_" + tmp_code
+    npy_path = os.path.join(temp_folder, "tmp_bbox_hs_" + tmp_code)
     np.save(npy_path, bbox_hs_list)
 
     im_filepath = im_file[0]
     im_ori = plt.imread(im_filepath)
     H, W = im_ori.shape[:2]
-    #     print(im_ori.shape)
-    #     plt.imshow(im_ori)
-    #     plt.show()
-    #     W = W_batch_array[0]
-    #     H = H_batch_array[0]
     insertion_points_x = -1
     insertion_points_y = -1
     ppitch = output_RCNN["pitch_batch_est"].cpu().numpy()[0]
@@ -872,15 +881,14 @@ def blender_render_reverse(
     def full_frame(width=None, height=None):
         mpl.rcParams["savefig.pad_inches"] = 0
         figsize = None if width is None else (width, height)
-        fig = plt.figure(figsize=figsize)
+        _ = plt.figure(figsize=figsize)
         ax = plt.axes([0, 0, 1, 1], frameon=False)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         plt.autoscale(tight=True)
 
     full_frame(15, 15)
-    im_boxes = plt.imread(im_filepath)
-    #     im_boxes = plt.imread(im_filepath)
+    _ = plt.imread(im_filepath)
     plt.imshow(im_ori)
     plt.axis("off")
     plt.xlim([0, W])
@@ -889,7 +897,9 @@ def blender_render_reverse(
     ax.set_axis_off()
     plt.autoscale(tight=True)
     plt.savefig(
-        save_path + "/%s_noBbox.jpg" % (save_name), dpi=100, bbox_inches="tight"
+        save_path + "/%s_noBbox.jpg" % (save_name),
+        dpi=100,
+        bbox_inches="tight",
     )
     plt.savefig(save_path + "/%s.jpg" % (save_name), dpi=100, bbox_inches="tight")
     print("Original image saved to " + save_path + "/%s.jpg" % (save_name))
@@ -952,15 +962,12 @@ def blender_render_reverse(
             color="white",
             bbox=dict(facecolor="black", alpha=0.4),
         )
-    #         plt.text(0, H-50, r'$y_c$: %.2fm'%input_dict_show['yc_est'] + ', ' + \
-    #                   r'$f_{mm}$: %.2fmm'%input_dict_show['f_est_mm']  + ', \n' + \
-    #                   r'$\theta$: %.2f$^\circ$'%input_dict_show['pitch_est_angle'], fontsize=50, color='white', bbox=dict(facecolor='black', alpha=0.4))
 
     ax.set_axis_off()
     plt.autoscale(tight=True)
 
     plt.savefig(reproj_file, dpi=100, bbox_inches="tight")
-    print("Rerpojection sabved to " + reproj_file)
+    print("Reprojection saved to " + reproj_file)
 
     if if_show:
         plt.show()
@@ -970,11 +977,7 @@ def blender_render_reverse(
     if not show_render:
         render_file = reproj_file
     else:
-        #     if replace_v0_01 is not None:
-        #         ppitch = np.arctan((replace_v0_01 - 0.5) / 0.5 * np.tan(vvfov/2.))
-
-        #     reproj_file = '/home/ruizhu/Downloads/plain-white-background.jpg'
-        rendering_command = "%s %s --background --python %s" % (
+        rendering_command = "{} {} --background --python {}".format(
             blender_path,
             scene_path,
             script_path,
@@ -995,12 +998,8 @@ def blender_render_reverse(
             )
         )
         rendering_command = rendering_command + rendering_command_append
-        #     print(rendering_command)
 
         os.system(rendering_command)
-
-        #     plt.savefig(save_path + '/%s_reproj.jpg'%(save_name), dpi = 100, bbox_inches='tight')
-        #     print('Blender rendering saved to '+save_path + '/%s.jpg'%(save_name))
 
         print("Loading rendered file: ", render_file)
         im_render = plt.imread(render_file)
@@ -1008,5 +1007,7 @@ def blender_render_reverse(
         plt.imshow(im_render)
         plt.show()
 
-    os.system("cp %s %s" % (render_file, save_path + "/%s_reproj.jpg" % (save_name)))
+    os.system(
+        "cp {} {}".format(render_file, save_path + "/%s_reproj.jpg" % (save_name)),
+    )
     print("Moded to : ", save_path + "/%s_reproj.jpg" % (save_name))

@@ -189,11 +189,6 @@ def bins2vfov(bins):
     return vfov_bins_centers[idxes]
 
 
-# def bins2distortion(bins):
-#     idxes = np.argmax(bins, axis=bins.ndim - 1)
-#     return distortion_bins_centers[idxes]
-
-
 class SUN360Horizon:
     def __init__(self, transforms=None, train=True, logger=None):
 
@@ -226,7 +221,6 @@ class SUN360Horizon:
         random.shuffle(self.data)
         if train:
             self.data = self.data[:-2000]
-            # self.data = self.data[:180]
         else:
             self.data = self.data[-2000:]
 
@@ -236,27 +230,10 @@ class SUN360Horizon:
         )
 
     def __getitem__(self, k):
-        # idx_sample = int(self.data[k].split('-')[-1][-5:-4])
-        # with open(self.data[k][:-5] + "meta.json", "r") as fhdl:
-        #     data = json.load(fhdl)[idx_sample] # img_id, im_filename, yaw, pitch, roll, vfov, focal_length, resX, resY
-        #     assert int(data[1][-5:-4]) == idx_sample, 'aaaaa'
-
         with open(self.data[k][:-4] + ".json") as fhdl:
             data = json.load(fhdl)
-
         im_path = self.data[k]
         im_ori_RGB = Image.open(im_path).convert("RGB")  # im_ori_RGB.size: [W, H]
-
-        # if 'Narrower' not in DS_ROOT:
-        #     pitch = data[3] # in radians
-        #     roll = data[4]
-        #     vfov = data[5]
-        #     focal_length_35mm_eq = data[6]
-        #     # resX, resY = data[7], data[8]
-        #     horizon = getHorizonLine(vfov, pitch)
-        #     sensor_size = data[9]
-        # else:
-
         assert "Narrower" in DS_ROOT or "DistWider20200403" in DS_ROOT
         data = data[0]
         pitch = data["pitch"]  # in radians
@@ -265,27 +242,18 @@ class SUN360Horizon:
         focal_length_35mm_eq = data["focal_length_35mm_eq"]
         horizon = getHorizonLine(vfov, pitch)
         sensor_size = data["sensor_size"]
-        # horizon_read = data[10] # dependent on sensor_size (horizon/portrait)
-        # print(horizon, horizon_read, sensor_size)
-        # assert horizon == horizon_read
-
         idx1 = np.digitize(horizon, horizon_bins)
         idx2 = np.digitize(pitch, pitch_bins)
         idx3 = np.digitize(roll, roll_bins)
         idx4 = np.digitize(vfov, vfov_bins)
-        # idx4 = np.digitize(data["spherical_distortion"], distortion_bins)
-        # print("{:.04f}".format(data["vfov"]), "{:.04f}".format(data["pitch"]), idx1)
 
         y1 = np.zeros((256,), dtype=np.float32)
         y2 = np.zeros((256,), dtype=np.float32)
         y3 = np.zeros((256,), dtype=np.float32)
         y4 = np.zeros((256,), dtype=np.float32)
 
-        # if idx2 > 255 or idx1 > 255:
-        #     print(self.data[k], data["offset"] / im.size[0], data["pitch"], idx1, idx2, idx3, idx4)
         y1[idx1] = y2[idx2] = y3[idx3] = y4[idx4] = 1.0
 
-        # x = torch.from_numpy(im.transpose((2,0,1)))
         im = self.transforms(im_ori_RGB)
         y1, y2, y3, y4 = map(torch.from_numpy, (y1, y2, y3, y4))
 
@@ -312,8 +280,6 @@ class SUN360Horizon:
             idx3,
             idx4,
         )
-
-        # {"angle units": "radians", "yaw": 0.0, "has_artifact": false, "has_day_sky": false, "source": "pano_aoijeqajukkoem", "pitch": 0.00492545270356224, "primary_top_content": "buildings or ceilings", "vfov": 0.9096217797805077, "roll": -0.01719714340875391}
 
     def __len__(self):
         return len(self.data)

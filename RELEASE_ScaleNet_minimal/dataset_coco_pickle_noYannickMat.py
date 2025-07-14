@@ -29,21 +29,9 @@ def getBins(minval, maxval, sigma, alpha, beta, kappa):
     return cumsum
 
 
-# def bin2midpointpitch(bins):
-#     pos = np.squeeze(bins.argmax(axis=-1))
-#     if pos < 31:
-#         return False, pitch_bins_low[pos]
-#     elif pos == 255:
-#         return False, np.pi/6
-#     elif pos >= 224:
-#         return False, pitch_bins_high[pos - 224]
-#     else:
-#         return True, (pos - 32)/192
-
-
 def make_bins_layers_list(x_bins_lowHigh_list):
     x_bins_layers_list = []
-    for layer_idx, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
+    for _, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
         x_bins = np.linspace(x_bins_lowHigh[0], x_bins_lowHigh[1], 255)
         x_bins_centers = x_bins.copy()
         x_bins_centers[:-1] += np.diff(x_bins_centers) / 2
@@ -52,12 +40,8 @@ def make_bins_layers_list(x_bins_lowHigh_list):
     return x_bins_layers_list
 
 
-# yc_bins_centers_1 = np.append(yc_bins_centers_1, yc_bins_centers_1[-1]) # 42 bins
-
-
 bins_lowHigh_list_dict = {}
 
-# yc_bins_lowHigh_list = [[0.5, 3.], [-0.3, 0.3], [-0.15, 0.15], [-0.15, 0.15], [-0.05, 0.05]] # 'SmallerBins'
 yc_bins_lowHigh_list = [
     [0.5, 5.0],
     [-0.3, 0.3],
@@ -65,12 +49,9 @@ yc_bins_lowHigh_list = [
     [-0.3, 0.3],
     [-0.15, 0.15],
 ]  # 'YcLargeBins'
-# yc_bins_lowHigh_list = [[0.5, 10.], [-0.5, 0.5], [-0.15, 0.15], [-0.3, 0.3], [-0.15, 0.15]] # 'YcLargerBinsV2'
-
 bins_lowHigh_list_dict["yc_bins_lowHigh_list"] = yc_bins_lowHigh_list
 yc_bins_layers_list = make_bins_layers_list(yc_bins_lowHigh_list)
 yc_bins_centers = yc_bins_layers_list[0]
-
 
 fmm_bins_lowHigh_list = [
     [0.0, 0.0],
@@ -149,7 +130,6 @@ class COCO2017Scale:
                 "test": "",
             },
             "coco_scale": {
-                # 10,913(8,731+2,182)
                 "train-val": "results_with_kps_20200403_noNull_filtered_ratio2-8_moreThan2_total64115",
                 "test": "results_with_kps_20200225_val2017_test_detOnly_filtered_2-8_moreThan2",
             },
@@ -160,9 +140,6 @@ class COCO2017Scale:
         }
         self.coco_subset = coco_subset
         data_name = data_name_subset_dict[self.coco_subset]
-
-        # if opt.cfg.DATA.COCO.TRAIN_VAL_OVERRIDE != '':
-        #     data_name['train-val'] = opt.cfg.DATA.COCO.TRAIN_VAL_OVERRIDE # Override
 
         pickle_paths = {}
         list_paths = {}
@@ -181,18 +158,12 @@ class COCO2017Scale:
             )
 
         if split in ["train", "val"]:
-            # ann_file = 'data/COCO/annotations/person_keypoints_train2017.json' # !!!! tmp!
-            # root = 'data/COCO/train2017'
             pickle_path = pickle_paths["train-val"]
             image_id_list_file = os.path.join(list_paths["train-val"], "%s.txt" % split)
             image_path = "data/COCO/train2017"
         else:
-            # ann_file = 'data/COCO/annotations/person_keypoints_val2017.json' # !!!! tmp!
-            # root = 'data/COCO/val2017'
             pickle_path = pickle_paths["test"]
             image_path = "data/COCO/val2017"
-
-        # super(COCO2017Scale, self).__init__(root, ann_file)
 
         self.opt = opt
         self.cfg = self.opt.cfg
@@ -202,13 +173,8 @@ class COCO2017Scale:
         else:
             self.train_val = False
 
-        # self.json_category_id_to_contiguous_id = {
-        #     v: i + 1 for i, v in enumerate(self.coco.getCatIds())
-        # }
-        # print(self.coco.getCatIds(), self.json_category_id_to_contiguous_id)
         self.json_category_id_to_contiguous_id = {1: 1}
 
-        # self.transforms_yannick = transforms_yannick
         self.transforms_maskrcnn = transforms_maskrcnn
         ts = time.time()
 
@@ -225,10 +191,6 @@ class COCO2017Scale:
                     "000000" + pickle_filename
                     for pickle_filename in self.pickle_filenames
                 ]
-            # if coco_subset=='coco_scale':
-            #     self.img_filenames = self.img_filenames[:40]
-            # else:
-            #     self.img_filenames = self.img_filenames[:100]
             self.pickle_files = [
                 os.path.join(pickle_path, pickle_filename + ".data")
                 for pickle_filename in self.pickle_filenames
@@ -317,8 +279,6 @@ class COCO2017Scale:
 
             target_keypoints = PersonKeypoints(kps_gt, im_ori_RGB.size)
             target.add_field("keypoints", target_keypoints)
-            # target.add_field("keypoints_mask", kps_mask)
-            # target = target.clip_to_image(remove_empty=True)
 
         if self.opt.est_bbox:
             classes = [1] * num_boxes  # !!!!! all person (1) for now...
