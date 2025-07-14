@@ -67,18 +67,18 @@ def getBins(minval, maxval, sigma, alpha, beta, kappa):
 #     return int(midpoint*192) + 32
 
 
-# def bin2midpointpitch(bins):
-#     pos = np.squeeze(bins.argmax(axis=-1))
-#     if pos < 31:
-#         return False, pitch_bins_low[pos]
-#     elif pos == 255:
-#         return False, np.pi / 6
-#     elif pos >= 224:
-#         return False, pitch_bins_high[pos - 224]
-#     else:
-#         return True, (pos - 32) / 192
-#
-#
+def bin2midpointpitch(bins):
+    pos = np.squeeze(bins.argmax(axis=-1))
+    if pos < 31:
+        return False, pitch_bins_low[pos]
+    elif pos == 255:
+        return False, np.pi / 6
+    elif pos >= 224:
+        return False, pitch_bins_high[pos - 224]
+    else:
+        return True, (pos - 32) / 192
+
+
 def make_bins_layers_list(x_bins_lowHigh_list):
     x_bins_layers_list = []
     for layer_idx, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
