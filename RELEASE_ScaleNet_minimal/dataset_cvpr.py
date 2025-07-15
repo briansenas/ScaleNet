@@ -10,31 +10,14 @@ import numpy as np
 import torch
 from panorama_cropping_dataset_generation.debugging import getHorizonLine
 from PIL import Image
-from scipy.stats import norm
 from termcolor import colored
+from utils.utils_coco import getBins
 
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 
 pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
 pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
-
-
-def getBins(minval, maxval, sigma, alpha, beta, kappa):
-    """Remember, bin 0 = below value! last bin mean >= maxval"""
-    x = np.linspace(minval, maxval, 255)
-
-    rv = norm(0, sigma)
-    pdf = rv.pdf(x)
-    pdf /= pdf.max()
-    pdf *= alpha
-    pdf = pdf.max() * beta - pdf
-    cumsum = np.cumsum(pdf)
-    cumsum = cumsum / cumsum.max() * kappa
-    cumsum -= cumsum[pdf.size // 2]
-
-    return cumsum
-
 
 # DS_ROOT = "/home/holdgeof/data/dimension_match_image_crops/"
 # DS_ROOT = "/home/holdgeof/data/sun360_sphericaldistortion"

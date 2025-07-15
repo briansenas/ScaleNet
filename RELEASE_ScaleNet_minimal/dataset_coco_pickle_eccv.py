@@ -11,122 +11,14 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 from PIL import Image
 from scipy.io import loadmat
-from scipy.stats import norm
 from termcolor import colored
 
-pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
-pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
-
-
-def getBins(minval, maxval, sigma, alpha, beta, kappa):
-    """Remember, bin 0 = below value! last bin mean >= maxval"""
-    x = np.linspace(minval, maxval, 255)
-
-    rv = norm(0, sigma)
-    pdf = rv.pdf(x)
-    pdf /= pdf.max()
-    pdf *= alpha
-    pdf = pdf.max() * beta - pdf
-    cumsum = np.cumsum(pdf)
-    cumsum = cumsum / cumsum.max() * kappa
-    cumsum -= cumsum[pdf.size // 2]
-
-    return cumsum
-
-
-def bin2midpointpitch(bins):
-    pos = np.squeeze(bins.argmax(axis=-1))
-    if pos < 31:
-        return False, pitch_bins_low[pos]
-    elif pos == 255:
-        return False, np.pi / 6
-    elif pos >= 224:
-        return False, pitch_bins_high[pos - 224]
-    else:
-        return True, (pos - 32) / 192
-
-
-def make_bins_layers_list(x_bins_lowHigh_list):
-    x_bins_layers_list = []
-    for _, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
-        x_bins = np.linspace(x_bins_lowHigh[0], x_bins_lowHigh[1], 255)
-        x_bins_centers = x_bins.copy()
-        x_bins_centers[:-1] += np.diff(x_bins_centers) / 2
-        x_bins_centers = np.append(x_bins_centers, x_bins_centers[-1])  # 42 bins
-        x_bins_layers_list.append(x_bins_centers)
-    return x_bins_layers_list
-
-
-bins_lowHigh_list_dict = {}
-
-yc_bins_lowHigh_list = [
-    [0.5, 5.0],
-    [-0.3, 0.3],
-    [-0.15, 0.15],
-    [-0.3, 0.3],
-    [-0.15, 0.15],
-]  # 'YcLargeBins'
-
-bins_lowHigh_list_dict["yc_bins_lowHigh_list"] = yc_bins_lowHigh_list
-yc_bins_layers_list = make_bins_layers_list(yc_bins_lowHigh_list)
-yc_bins_centers = yc_bins_layers_list[0]
-
-
-fmm_bins_lowHigh_list = [
-    [0.0, 0.0],
-    [-0.2, 0.2],
-    [-0.05, 0.05],
-    [-0.05, 0.05],
-    [-0.05, 0.05],
-]  # percentage!!
-bins_lowHigh_list_dict["fmm_bins_lowHigh_list"] = fmm_bins_lowHigh_list
-fmm_bins_layers_list = make_bins_layers_list(fmm_bins_lowHigh_list)
-
-
-v0_bins_lowHigh_list = [
-    [0.0, 0.0],
-    [-0.15, 0.15],
-    [-0.05, 0.05],
-    [-0.05, 0.05],
-    [-0.05, 0.05],
-]  # 'SmallerBins'
-bins_lowHigh_list_dict["v0_bins_lowHigh_list"] = v0_bins_lowHigh_list
-v0_bins_layers_list = make_bins_layers_list(v0_bins_lowHigh_list)
-
-
-# human_bins = np.linspace(1., 2., 256)
-human_bins = np.linspace(1.0, 1.9, 256)  # 'SmallerPersonBins'
-# human_bins = np.linspace(1., 2.5, 256) #  'V2PersonCenBins'
-# human_bins = np.linspace(0.7, 1.9, 256) #  'V3PersonCenBins'
-human_bins_1 = np.linspace(-0.2, 0.2, 256)
-human_bins_lowHigh_list = [
-    [0.0, 0.0],
-    [-0.3, 0.15],
-    [-0.10, 0.10],
-    [-0.10, 0.10],
-    [-0.05, 0.05],
-]  # 'SmallerBins'
-bins_lowHigh_list_dict["human_bins_lowHigh_list"] = human_bins_lowHigh_list
-human_bins_layers_list = make_bins_layers_list(human_bins_lowHigh_list)
-
-car_bins = np.linspace(1.4, 1.70, 256)  # 'V2CarBins'
-car_bins_lowHigh_list = [
-    [0.0, 0.0],
-    [-0.10, 0.10],
-    [-0.05, 0.05],
-    [-0.10, 0.10],
-    [-0.05, 0.05],
-]  # 'SmallerBins'
-bins_lowHigh_list_dict["car_bins_lowHigh_list"] = car_bins_lowHigh_list
-car_bins_layers_list = make_bins_layers_list(car_bins_lowHigh_list)
-
-
+# NOTE: What is this directory
 results_path_yannick = "data/coco_results/yannick_results_train2017_filtered"
 # image_path = '/home/ruizhu/Documents/Projects/adobe_scale_est/data/COCO/train2017'
 # bbox_path = '/home/ruizhu/Documents/Projects/adobe_scale_est/data/coco_results/imgs_with_morethan2_standing_persons_allVis_train2017_2'
 
 # bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_allVis_train2017_2'
-
 
 # new dataset 2020
 # bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200101-2'
@@ -148,17 +40,15 @@ pickle_paths["test"] = (
 bbox_paths = {key: pickle_paths[key].replace("/pickle", "/npy") for key in pickle_paths}
 
 
-class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
+class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
     def __init__(
         self,
         transforms_maskrcnn=None,
         transforms_yannick=None,
         split="",
-        coco_subset="coco_scale",
         shuffle=True,
         logger=None,
         opt=None,
-        dataset_name="",
         write_split=False,
     ):
 
@@ -297,7 +187,6 @@ class COCO2017Scale(torchvision.datasets.coco.CocoDetection):
 
             for train_pickle in self.pickle_files:
                 train_id_06 = os.path.basename(train_pickle)[6:12]
-                # train_id_06 = os.path.basename(train_pickle).split('_')[1]
                 print(train_id_06)
                 train_file.write("%s\n" % (train_id_06))
             train_file.close()
@@ -512,8 +401,7 @@ def collate_fn_padd(batch):
 
 
 if __name__ == "__main__":
-
-    train = COCO2017Scale(train=True)
+    train = COCO2017ECCV(train=True)
     print(len(train))
     for a in range(len(train)):
         _ = train[a]
