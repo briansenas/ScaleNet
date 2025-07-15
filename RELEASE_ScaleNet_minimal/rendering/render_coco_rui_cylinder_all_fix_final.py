@@ -67,12 +67,17 @@ class ArgumentParserForBlender(argparse.ArgumentParser):
 def setScene():
     bpy.data.scenes["Scene"].cycles.film_transparent = True
     try:
-        prefs = bpy.context.user_preferences.addons["cycles"].preferences
+        prefs = bpy.context.preferences.addons["cycles"].preferences
         prefs.compute_device_type = "CUDA"
-        prefs.compute_device = "CUDA_0"
+        devices = prefs.get_devices()
+        if devices:
+            for device in devices:
+                if device.type == "CUDA":
+                    device.use = True
+                    break
 
         bpy.context.scene.cycles.device = "GPU"
-        bpy.context.scene.cycles.sample = 128
+        bpy.context.scene.cycles.samples = 128
         bpy.context.scene.cycles.use_adaptive_sampling = True
         bpy.context.scene.cycles.use_denoising = True
         print("GPU render!")
@@ -114,6 +119,7 @@ def getObjBoundaries(obj):
 def changeVisibility(obj, hide):
     """Hide or show object in render."""
     obj.hide_set(hide)
+    obj.hide_viewport = hide
     for child in obj.children:
         changeVisibility(child, hide)
 
@@ -144,10 +150,13 @@ def setCamera(pitch, roll, hfov, vfov, imh, imw, cam_pos=(0, 0, 1.6)):
     bpy.data.scenes["Scene"].render.resolution_x = imw
     bpy.data.scenes["Scene"].render.resolution_y = imh
     bpy.data.scenes["Scene"].render.resolution_percentage = 100
+    bpy.context.view_layer.update()
 
 
 def setObjectToImagePosition(object_name, ipv, iph):
     """insertion point vertical and horizontal (ipv, iph) in relative units."""
+    bpy.context.view_layer.update()
+
     cam = bpy.data.objects["Camera"]
 
     # Get the 3D position of the 2D insertion point
@@ -174,6 +183,7 @@ def setObjectToImagePosition(object_name, ipv, iph):
         for child_obj in bpy.data.objects[object_name].children:
             child_obj.location = cam.location + obj_direction * length
 
+    bpy.context.view_layer.update()
     print(f"setObjectToImagePosition: {bpy.data.objects[object_name].location}")
 
 
@@ -182,10 +192,10 @@ def changeBackgroundImage(bgpath, size):
         previous_background = bpy.data.images["background"]
         bpy.data.images.remove(previous_background)
 
-    img = bpy.data.images.load(bgpath)
+    img = bpy.data.images.load(filepath=bgpath)
     img.name = "background"
 
-    bpy.data.images["background"].scale(*size)
+    img.scale(size[0], size[1])
 
     tree = bpy.context.scene.node_tree
     for node in tree.nodes:
@@ -223,8 +233,7 @@ def setParametricSkyLighting(theta, phi, t):
 
     bpy.data.objects["Sun"].rotation_euler = Vector((theta, 0, -phi + np.pi))
     bpy.data.lights["Sun"].shadow_soft_size = 0.03
-    bpy.data.lights["Sun"].node_tree.nodes["Emission"].inputs[1].default_value = 4
-
+    bpy.data.lights["Sun"].energy = 4
     bpy.data.objects["Sun"].hide_set(False)
 
 
@@ -236,7 +245,7 @@ def setIBL(path, phi):
         previous_background = bpy.data.images["envmap"]
         bpy.data.images.remove(previous_background)
 
-    img = bpy.data.images.load(path)
+    img = bpy.data.images.load(filepath=path)
     img.name = "envmap"
 
     # Remove previous link to Background and link it with Environment Texture
@@ -264,8 +273,6 @@ def performRendering(
     close_blender=False,
     tmp_code="",
 ):
-    os.makedirs(subfolder, exist_ok=True)
-
     # redirect output to log file
     logfile = "blender_render.log"
     open(logfile, "a").close()
@@ -275,6 +282,7 @@ def performRendering(
     os.open(logfile, os.O_WRONLY)
 
     # do the rendering
+    os.makedirs(os.path.join(curdir, subfolder), exist_ok=True)
     imgpath = os.path.join(curdir, f"{subfolder}/{k}{suffix}_{tmp_code}.png")
     bpy.data.scenes["Scene"].render.filepath = imgpath
     bpy.ops.render.render(write_still=True)
@@ -342,24 +350,26 @@ if __name__ == "__main__":
     changeBackgroundImage(img_path, (imw, imh))
     setParametricSkyLighting(np.pi / 4, np.pi / 8, 3)
 
-    object_name = "Cylinder"
+    object_name = "chair"
     all_obj_names = ["Cone", "chair", "Cylinder"]
 
     setCamera(-pitch, roll, hfov, vfov, imh, imw, cam_pos=(0, 0, h_cam))
-    changeVisibility(bpy.data.objects[object_name], hide=False)
+    for obj in all_obj_names:
+        changeVisibility(bpy.data.objects[obj], hide=True)
 
     src_obj = bpy.data.objects[object_name]
+    created_objects = []
     for idx, ((ipv, iph), bbox_h) in enumerate(zip(insertion_points, bbox_hs_list)):
         print("===============================", idx)
         # Rotate the object randomly about its y-axis
         # (just for the sake of example, won't do anything on a torus, of course...)
         new_obj = src_obj.copy()
         new_obj.name = "%s_%d" % (object_name, idx)
+        changeVisibility(bpy.data.objects[new_obj.name], hide=False)
         new_obj.data = src_obj.data.copy()
         bpy.context.collection.objects.link(new_obj)
-        print("new_obj.location", new_obj.location)
-
         setObjectToImagePosition(new_obj.name, ipv / imh, iph / imw)
+        created_objects.append(new_obj)
 
         # Check if object is inside the frame. If not, resize it a tad
         original_scale = new_obj.scale.copy()
@@ -367,17 +377,16 @@ if __name__ == "__main__":
         obj_bounds = getObjBoundaries(new_obj)
         print("---obj_bounds", obj_bounds)
 
-        if object_name == "Cylinder":
-            print("Original scale", new_obj.scale)
-            print("Original dimensions", new_obj.dimensions)
-            new_obj.dimensions = new_obj.dimensions * bbox_h
-            print(
-                "After scale, dimensions, bbox_h",
-                new_obj.scale,
-                new_obj.dimensions,
-                bbox_h,
-            )
-            print("After location", new_obj.location)
+        print("Original scale", new_obj.scale)
+        print("Original dimensions", new_obj.dimensions)
+        new_obj.dimensions = new_obj.dimensions * bbox_h
+        print(
+            "After scale, dimensions, bbox_h",
+            new_obj.scale,
+            new_obj.dimensions,
+            bbox_h,
+        )
+        print("After location", new_obj.location)
 
         # Set on ground, useful if scaled
         vertices = getVertices(new_obj, world=True)
@@ -386,12 +395,7 @@ if __name__ == "__main__":
         print("Moved the object in Z-axis by", dist_to_ground)
         new_obj.rotation_euler[2] = np.pi / 4.0
         print("After location 2", new_obj.location)
-
-    changeVisibility(bpy.data.objects[object_name], hide=True)
-    for obj_name_single in all_obj_names:
-        if object_name != obj_name_single:
-            changeVisibility(bpy.data.objects[obj_name_single], hide=True)
-            print("Hid %s" % obj_name_single)
+        bpy.context.view_layer.update()
 
     ts = time.time()
     performRendering(
