@@ -90,7 +90,6 @@ def getVertices(obj, world=False, first=False):
             vertices.append([obj.matrix_world @ x.co for x in obj.data.vertices])
         else:
             vertices.append([x.co for x in obj.data.vertices])
-        # print('+++++', vertices[-1])
     for idx_child, child in enumerate(obj.children):
         vertices.extend(getVertices(child, world=world))
         print(idx_child)
@@ -114,7 +113,7 @@ def getObjBoundaries(obj):
 
 def changeVisibility(obj, hide):
     """Hide or show object in render."""
-    obj.hide_render = hide
+    obj.hide_set(hide)
     for child in obj.children:
         changeVisibility(child, hide)
 
@@ -138,8 +137,6 @@ def setCamera(pitch, roll, hfov, vfov, imh, imw, cam_pos=(0, 0, 1.6)):
     cam.rotation_euler[0] = -pitch + 90.0 * np.pi / 180
     cam.rotation_euler[1] = -roll
     cam.rotation_euler[2] = 0
-    # bpy.data.cameras["Camera"].angle_x = hfov
-    # bpy.data.cameras["Camera"].angle_y = vfov
     if imh > imw:
         bpy.data.cameras["Camera"].angle = vfov
     else:
@@ -147,14 +144,10 @@ def setCamera(pitch, roll, hfov, vfov, imh, imw, cam_pos=(0, 0, 1.6)):
     bpy.data.scenes["Scene"].render.resolution_x = imw
     bpy.data.scenes["Scene"].render.resolution_y = imh
     bpy.data.scenes["Scene"].render.resolution_percentage = 100
-    # bpy.data.scenes["Scene"].update()
 
 
 def setObjectToImagePosition(object_name, ipv, iph):
     """insertion point vertical and horizontal (ipv, iph) in relative units."""
-
-    # bpy.data.scenes["Scene"].update()
-
     cam = bpy.data.objects["Camera"]
 
     # Get the 3D position of the 2D insertion point
@@ -177,13 +170,9 @@ def setObjectToImagePosition(object_name, ipv, iph):
     # Set the object location
     if len(bpy.data.objects[object_name].children) == 0:
         bpy.data.objects[object_name].location = cam.location + obj_direction * length
-        # bpy.data.objects[object_name].location[1] -= 0.25
-        # bpy.data.objects[object_name].location[0] -= 0.25
     else:
         for child_obj in bpy.data.objects[object_name].children:
             child_obj.location = cam.location + obj_direction * length
-
-    # bpy.data.scenes["Scene"].update()
 
     print(f"setObjectToImagePosition: {bpy.data.objects[object_name].location}")
 
@@ -237,7 +226,6 @@ def setParametricSkyLighting(theta, phi, t):
     bpy.data.lights["Sun"].node_tree.nodes["Emission"].inputs[1].default_value = 4
 
     bpy.data.objects["Sun"].hide_set(False)
-    # bpy.data.objects["Sun"].hide_render = False
 
 
 def setIBL(path, phi):
@@ -266,8 +254,7 @@ def setIBL(path, phi):
         (0, 0, phi + np.pi / 2),
     )
 
-    bpy.data.objects["Sun"].hide = True
-    bpy.data.objects["Sun"].hide_render = True
+    bpy.data.objects["Sun"].hide_set(True)
 
 
 def performRendering(
@@ -277,10 +264,6 @@ def performRendering(
     close_blender=False,
     tmp_code="",
 ):
-
-    # Flush scene modifications
-    # bpy.data.scenes["Scene"].update()
-
     os.makedirs(subfolder, exist_ok=True)
 
     # redirect output to log file
@@ -293,7 +276,6 @@ def performRendering(
 
     # do the rendering
     imgpath = os.path.join(curdir, f"{subfolder}/{k}{suffix}_{tmp_code}.png")
-    # assert not os.path.isfile(imgpath)
     bpy.data.scenes["Scene"].render.filepath = imgpath
     bpy.ops.render.render(write_still=True)
 
@@ -306,10 +288,6 @@ def performRendering(
 
     if close_blender:
         bpy.ops.wm.quit_blender()
-
-    # img_render = plt.imread(imgpath)
-    # plt.imshow(imgpath)
-    # plt.show()
 
 
 if __name__ == "__main__":
@@ -364,9 +342,7 @@ if __name__ == "__main__":
     changeBackgroundImage(img_path, (imw, imh))
     setParametricSkyLighting(np.pi / 4, np.pi / 8, 3)
 
-    # object_name = "Cone"
     object_name = "Cylinder"
-    # object_name = "chair"
     all_obj_names = ["Cone", "chair", "Cylinder"]
 
     setCamera(-pitch, roll, hfov, vfov, imh, imw, cam_pos=(0, 0, h_cam))
@@ -380,8 +356,6 @@ if __name__ == "__main__":
         new_obj = src_obj.copy()
         new_obj.name = "%s_%d" % (object_name, idx)
         new_obj.data = src_obj.data.copy()
-        # new_obj.animation_data_clear()
-        # bpy.context.scene.objects.link(new_obj)
         bpy.context.collection.objects.link(new_obj)
         print("new_obj.location", new_obj.location)
 
@@ -390,7 +364,6 @@ if __name__ == "__main__":
         # Check if object is inside the frame. If not, resize it a tad
         original_scale = new_obj.scale.copy()
 
-        # bpy.data.scenes["Scene"].update()
         obj_bounds = getObjBoundaries(new_obj)
         print("---obj_bounds", obj_bounds)
 
@@ -398,7 +371,6 @@ if __name__ == "__main__":
             print("Original scale", new_obj.scale)
             print("Original dimensions", new_obj.dimensions)
             new_obj.dimensions = new_obj.dimensions * bbox_h
-            # bpy.context.scene.update()
             print(
                 "After scale, dimensions, bbox_h",
                 new_obj.scale,
@@ -413,7 +385,6 @@ if __name__ == "__main__":
         new_obj.location[2] -= dist_to_ground
         print("Moved the object in Z-axis by", dist_to_ground)
         new_obj.rotation_euler[2] = np.pi / 4.0
-        # bpy.context.scene.update()
         print("After location 2", new_obj.location)
 
     changeVisibility(bpy.data.objects[object_name], hide=True)
