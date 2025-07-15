@@ -1,14 +1,15 @@
 import torch
 import torch.nn as nn
-from pointnet.pointnet_part_seg import Conv1d
-from pointnet.pointnet_part_seg import F
-from pointnet.pointnet_part_seg import MLP
-from pointnet.pointnet_part_seg import PointNetPartSeg
-from pointnet.pointnet_part_seg import set_bn
-from pointnet.pointnet_part_seg import SharedMLP
-from pointnet.pointnet_part_seg import Stem
-from pointnet.pointnet_part_seg import TNet
-from pointnet.pointnet_part_seg import xavier_uniform
+
+from .pointnet.pointnet_part_seg import Conv1d
+from .pointnet.pointnet_part_seg import F
+from .pointnet.pointnet_part_seg import MLP
+from .pointnet.pointnet_part_seg import PointNetPartSeg
+from .pointnet.pointnet_part_seg import set_bn
+from .pointnet.pointnet_part_seg import SharedMLP
+from .pointnet.pointnet_part_seg import Stem
+from .pointnet.pointnet_part_seg import TNet
+from .pointnet.pointnet_part_seg import xavier_uniform
 
 
 class CamHPersonHPointNet(nn.Module):

@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
-from pointnet.pointnet_cls import FC
-from pointnet.pointnet_cls import MLP
-from pointnet.pointnet_cls import set_bn
-from pointnet.pointnet_cls import SharedMLP
-from pointnet.pointnet_cls import Stem
-from pointnet.pointnet_cls import xavier_uniform
+
+from .pointnet.pointnet_cls import FC
+from .pointnet.pointnet_cls import MLP
+from .pointnet.pointnet_cls import set_bn
+from .pointnet.pointnet_cls import SharedMLP
+from .pointnet.pointnet_cls import Stem
+from .pointnet.pointnet_cls import xavier_uniform
 
 
 class CamHPointNet(nn.Module):
