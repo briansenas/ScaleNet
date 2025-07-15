@@ -20,7 +20,8 @@ from panorama_cropping_dataset_generation.debugging import showHorizonLine
 from panorama_cropping_dataset_generation.debugging import showHorizonLineFromHorizon
 from PIL import Image
 from scipy.special import softmax
-from utils.utils_misc import *
+from utils.utils_misc import colored
+from utils.utils_misc import green
 
 PATH = pathlib.Path(__file__).parent.resolve()
 
@@ -632,10 +633,8 @@ def blender_render(
     im_file,
     save_path="./",
     if_show=False,
-    idx=0,
     save_name="",
     tmp_code="iamgroot",
-    show_bbox=True,
 ):
 
     tmp_code = "".join(
@@ -644,22 +643,16 @@ def blender_render(
 
     currentdir = PATH
     blender_path = "/snap/bin/blender"
-    # scene_path = currentdir + '/rendering/scene_cone.blend'
     scene_path = os.path.join(currentdir, os.pardir, "rendering/scene_chair_fix.blend")
-    # script_path = currentdir + '/rendering/render_coco_rui.py'
-    # script_path = currentdir + '/rendering/render_coco_rui_chair.py'
     script_path = os.path.join(
         currentdir,
         os.pardir,
         "rendering/render_coco_rui_cylinder_all_fix_final.py",
     )
-    # render_file = currentdir + '/rendering/render/render_0.png'
 
     insertion_points_xy_list = []
     bboxes_filter = input_dict_show["bbox_gt"]
-    # bboxes_filter = [bboxes_filter[0]]
     for bbox in bboxes_filter:
-        #         insertion_points_xy_list.append([bbox[0]+bbox[2]/2., bbox[1]+bbox[3]])
         insertion_points_xy_list.append([bbox[0], bbox[1] + bbox[3]])
 
     temp_folder = os.path.join(currentdir, "temp")
@@ -809,7 +802,6 @@ def blender_render_reverse(
     im_file,
     save_path="./temp",
     if_show=False,
-    idx=0,
     save_name="",
     tmp_code="iamgroot",
     show_bbox=True,
@@ -823,23 +815,19 @@ def blender_render_reverse(
     os.makedirs(save_path, exist_ok=True)
     currentdir = PATH
     blender_path = "/snap/bin/blender"
-    # scene_path = currentdir + '/rendering/scene_cone.blend'
     scene_path = os.path.join(currentdir, os.pardir, "rendering/scene_chair_fix.blend")
-    # script_path = currentdir + '/rendering/render_coco_rui.py'
-    # script_path = currentdir + '/rendering/render_coco_rui_chair.py'
     script_path = os.path.join(
         currentdir,
         os.pardir,
         "rendering/render_coco_rui_cylinder_all_fix_final.py",
     )
-    # render_file = currentdir + '/rendering/render/render_0.png'
-
     render_file = os.path.join(
         currentdir,
-        "/rendering/render/render_all_%s.png" % tmp_code,
+        "rendering/render/render_all_%s.png" % tmp_code,
     )
     reproj_file = os.path.join(
-        currentdir + "/rendering/render/render_all_%s_reproj.png" % tmp_code,
+        currentdir,
+        "rendering/render/render_all_%s_reproj.png" % tmp_code,
     )
     from os import path
 

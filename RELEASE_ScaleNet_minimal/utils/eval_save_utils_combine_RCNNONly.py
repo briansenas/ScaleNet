@@ -5,7 +5,7 @@ from eval_epoch_cvpr_RCNN import eval_epoch_cvpr_RCNN
 from eval_epoch_v5_combine_RCNNOnly_pose_multiCat import eval_epoch_combine_RCNNOnly
 from maskrcnn_benchmark.utils.comm import synchronize
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils.utils_misc import *
+from utils.utils_misc import green
 
 from .train_utils import clean_up_checkpoints
 
@@ -69,7 +69,9 @@ def check_eval_COCO(
                     )
                     writer.add_scalar("training/scheduler-best", scheduler.best, tid)
                     writer.add_scalar(
-                        "training/scheduler-last_epoch", scheduler.last_epoch, tid
+                        "training/scheduler-last_epoch",
+                        scheduler.last_epoch,
+                        tid,
                     )
                     writer.add_scalar("training/scheduler-epoch", epoch, tid)
         epochs_evaled.append(epoch)
@@ -99,7 +101,16 @@ def check_eval_SUN360(
 
         with torch.no_grad():
             return_dict_epoch = eval_epoch_cvpr_RCNN(
-                model, eval_loader, epoch, tid, device, writer, None, -1, logger, opt
+                model,
+                eval_loader,
+                epoch,
+                tid,
+                device,
+                writer,
+                None,
+                -1,
+                logger,
+                opt,
             )
             synchronize()
             if isinstance(scheduler, ReduceLROnPlateau) and rank == 0:
@@ -113,7 +124,8 @@ def check_eval_SUN360(
                 # if 'eval_loss_sum_SUN360' in return_dict_epoch\
                 if "SUN360RCNN" in opt.task_name:
                     scheduler.step(
-                        return_dict_epoch["eval_loss_sum_SUN360"], epoch=epoch
+                        return_dict_epoch["eval_loss_sum_SUN360"],
+                        epoch=epoch,
                     )
                     is_better = scheduler.num_bad_epochs == 0
                     # logger.info(green('scheduler.step with lr = %.2f, loss_mean = %.2f, best = %.2f, bad = %d, patience = %d'%(scheduler.get_lr(), return_dict_epoch['eval_loss_sum_SUN360'], scheduler.best, scheduler.num_bad_epochs, scheduler.patience)))
@@ -125,8 +137,8 @@ def check_eval_SUN360(
                                 scheduler.best,
                                 scheduler.num_bad_epochs,
                                 scheduler.patience,
-                            )
-                        )
+                            ),
+                        ),
                     )
                     writer.add_scalar(
                         "training/scheduler-num_bad_epochs",
@@ -135,7 +147,9 @@ def check_eval_SUN360(
                     )
                     writer.add_scalar("training/scheduler-best", scheduler.best, tid)
                     writer.add_scalar(
-                        "training/scheduler-last_epoch", scheduler.last_epoch, tid
+                        "training/scheduler-last_epoch",
+                        scheduler.last_epoch,
+                        tid,
                     )
                     writer.add_scalar("training/scheduler-epoch", epoch, tid)
         epochs_evaled.append(epoch)
@@ -266,7 +280,8 @@ def check_save(
     ):
 
         saved_filename = checkpointer.save(
-            "checkpointer_epoch%04d_iter%07d" % (epoch_total, tid), **arguments
+            "checkpointer_epoch%04d_iter%07d" % (epoch_total, tid),
+            **arguments,
         )
         clean_up_checkpoints(
             os.path.join(checkpoints_folder, opt.task_name),

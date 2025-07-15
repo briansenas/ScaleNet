@@ -8,6 +8,7 @@ from imageio import imread
 from imageio import imsave
 from PIL import Image
 from PIL import ImageDraw
+from scipy.stats import norm
 
 PATH = pathlib.Path(__file__).parent.resolve()
 
@@ -35,12 +36,7 @@ def check_clear(ann, vis=False, debug=False):
         print(np.hstack((np.arange(kps.shape[0]).reshape((-1, 1)), kps)))
 
     if vis:
-        plt.figure(figsize=(20, 20))
-        plt.imshow(I)
-        plt.axis("off")
-        for idx, kp in enumerate(kps):
-            plt.scatter(kp[0], kp[1])
-            plt.text(kp[0], kp[1], "%d" % idx, weight="bold")
+        pass 
 
     eyes_ys = kps[1:5, 1]
     eyes_ys_valid_idx = eyes_ys != 0
@@ -183,12 +179,6 @@ def vis_yannick(yannick_results, image_file):
     if horizon_visible:
         hl, hr = pitch - np.tan(roll) / 2, pitch + np.tan(roll) / 2
         im = drawLine(np.asarray(im), hl, hr)
-        # im = Image.fromarray(im)
-        # draw = ImageDraw.Draw(im)
-        # draw.text((10, 10), "midpoint:{0:.2f}, roll:{1:.2f}, vfov:{2:.2f}, xi:{3:.2f}".format(float(pitch), float(roll*180/np.pi), float(vfov*180/np.pi), distortion), font=fnt, fill=(255, 255, 255, 255))
-    # else:
-    # draw = ImageDraw.Draw(im)
-    # draw.text((10, 10), "pitch:{0:.2f}, roll:{1:.2f}, vfov:{2:.2f}, xi:{3:.2f}".format(float(pitch*180/np.pi), float(roll*180/np.pi), float(vfov*180/np.pi), distortion), font=fnt, fill=(255, 255, 255, 255))
     im = np.asarray(im)
     imsave(os.path.join(output_dir, image_file), im)
 
@@ -207,3 +197,107 @@ def vis_yannick(yannick_results, image_file):
     plt.close()
 
     # print("{}: {}, {}, {}, {}, {}".format(debug_filename, horizon_visible, pitch, roll, vfov, distortion))
+
+
+def getBins(minval, maxval, sigma, alpha, beta, kappa):
+    """Remember, bin 0 = below value! last bin mean >= maxval"""
+    x = np.linspace(minval, maxval, 255)
+
+    rv = norm(0, sigma)
+    pdf = rv.pdf(x)
+    pdf /= pdf.max()
+    pdf *= alpha
+    pdf = pdf.max() * beta - pdf
+    cumsum = np.cumsum(pdf)
+    cumsum = cumsum / cumsum.max() * kappa
+    cumsum -= cumsum[pdf.size // 2]
+
+    return cumsum
+
+
+def make_bins_layers_list(x_bins_lowHigh_list):
+    x_bins_layers_list = []
+    for _, x_bins_lowHigh in enumerate(x_bins_lowHigh_list):
+        x_bins = np.linspace(x_bins_lowHigh[0], x_bins_lowHigh[1], 255)
+        x_bins_centers = x_bins.copy()
+        x_bins_centers[:-1] += np.diff(x_bins_centers) / 2
+        x_bins_centers = np.append(x_bins_centers, x_bins_centers[-1])  # 42 bins
+        x_bins_layers_list.append(x_bins_centers)
+    return x_bins_layers_list
+
+
+bins_lowHigh_list_dict = {}
+
+yc_bins_lowHigh_list = [
+    [0.5, 5.0],
+    [-0.3, 0.3],
+    [-0.15, 0.15],
+    [-0.3, 0.3],
+    [-0.15, 0.15],
+]  # 'YcLargeBins'
+bins_lowHigh_list_dict["yc_bins_lowHigh_list"] = yc_bins_lowHigh_list
+yc_bins_layers_list = make_bins_layers_list(yc_bins_lowHigh_list)
+yc_bins_centers = yc_bins_layers_list[0]
+
+fmm_bins_lowHigh_list = [
+    [0.0, 0.0],
+    [-0.2, 0.2],
+    [-0.05, 0.05],
+    [-0.05, 0.05],
+    [-0.05, 0.05],
+]  # percentage!!
+bins_lowHigh_list_dict["fmm_bins_lowHigh_list"] = fmm_bins_lowHigh_list
+fmm_bins_layers_list = make_bins_layers_list(fmm_bins_lowHigh_list)
+
+
+v0_bins_lowHigh_list = [
+    [0.0, 0.0],
+    [-0.15, 0.15],
+    [-0.05, 0.05],
+    [-0.05, 0.05],
+    [-0.05, 0.05],
+]  # 'SmallerBins'
+bins_lowHigh_list_dict["v0_bins_lowHigh_list"] = v0_bins_lowHigh_list
+v0_bins_layers_list = make_bins_layers_list(v0_bins_lowHigh_list)
+
+
+# human_bins = np.linspace(1., 2., 256)
+human_bins = np.linspace(1.0, 1.9, 256)  # 'SmallerPersonBins'
+# human_bins = np.linspace(1., 2.5, 256) #  'V2PersonCenBins'
+# human_bins = np.linspace(0.7, 1.9, 256) #  'V3PersonCenBins'
+human_bins_1 = np.linspace(-0.2, 0.2, 256)
+human_bins_lowHigh_list = [
+    [0.0, 0.0],
+    [-0.3, 0.15],
+    [-0.10, 0.10],
+    [-0.10, 0.10],
+    [-0.05, 0.05],
+]  # 'SmallerBins'
+bins_lowHigh_list_dict["human_bins_lowHigh_list"] = human_bins_lowHigh_list
+human_bins_layers_list = make_bins_layers_list(human_bins_lowHigh_list)
+
+car_bins = np.linspace(1.4, 1.70, 256)  # 'V2CarBins'
+car_bins_lowHigh_list = [
+    [0.0, 0.0],
+    [-0.10, 0.10],
+    [-0.05, 0.05],
+    [-0.10, 0.10],
+    [-0.05, 0.05],
+]  # 'SmallerBins'
+bins_lowHigh_list_dict["car_bins_lowHigh_list"] = car_bins_lowHigh_list
+car_bins_layers_list = make_bins_layers_list(car_bins_lowHigh_list)
+
+pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
+pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
+
+
+def bin2midpointpitch(bins):
+    pos = np.squeeze(bins.argmax(axis=-1))
+    if pos < 31:
+        return False, pitch_bins_low[pos]
+    elif pos == 255:
+        return False, np.pi / 6
+    elif pos >= 224:
+        return False, pitch_bins_high[pos - 224]
+    else:
+        return True, (pos - 32) / 192

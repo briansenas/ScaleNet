@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 
@@ -7,7 +6,8 @@ def generate_field(f, xi, H, W, el, roll, device):
     v0 = H / 2.0
 
     grid_x, grid_y = torch.meshgrid(
-        torch.arange(0, W).float().to(device), torch.arange(0, H).float().to(device)
+        torch.arange(0, W).float().to(device),
+        torch.arange(0, H).float().to(device),
     )
 
     X_Cam = (grid_x - u0) / f

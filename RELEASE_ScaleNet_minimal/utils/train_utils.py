@@ -1,9 +1,12 @@
 from tqdm import tqdm
 import logging
 import ntpath
-from utils.utils_misc import *
+from utils.utils_misc import white_blue 
+from utils.utils_misc import magenta 
+from utils.utils_misc import print_white_blue 
+from utils.utils_misc import colored
 from utils import utils_coco
-from dataset_coco_pickle_eccv import bin2midpointpitch
+from utils.utils_coco import bin2midpointpitch
 from maskrcnn_benchmark.utils.comm import get_world_size
 import glob
 import os
@@ -73,13 +76,10 @@ def save_checkpoint(
 def clean_up_checkpoints(
     checkpoint_folder, leave_N, start_with="checkpoint_", logger=None
 ):
-    # checkpoint_folder = '/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/checkpoint/test'
-    # list_checkpoints = glob.glob(checkpoint_folder+'/checkpoint*.pth.tar')
     list_checkpoints = list(
         filter(os.path.isfile, glob.glob(checkpoint_folder + "/%s*.*" % start_with))
     )
     list_checkpoints.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-    # print([ntpath.basename(filename) for filename in list_checkpoints])
 
     last_checkpoint_file = os.path.join(checkpoint_folder, "last_checkpoint")
     try:
@@ -95,8 +95,6 @@ def clean_up_checkpoints(
 
     if len(list_checkpoints) > leave_N:
         for checkpoint_path in list_checkpoints[leave_N:]:
-            # last_saved = '/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/checkpoint/tmp2/checkpointer_epoch0010_iter0000100.pth'
-            # print(ntpath.basename(last_saved), ntpath.basename(checkpoint_path), last_saved)
             if last_saved is not None and ntpath.basename(
                 last_saved
             ) == ntpath.basename(checkpoint_path):
@@ -130,14 +128,6 @@ def summary_thres(array, threses, writer, name, tid):
 
 
 def load_densenet(model, ckpt_name, checkpoints_folder, opt, old=False):
-    # print(model_summary(model, (3, 224, 224), [(3, 800, 600)]))
-    # for name, param in model.named_parameters():
-    #     print(name, param.shape)
-    # for a in model.state_dict():
-    #     print(a)
-    # print(model.classifier_1.weight.data.cpu().numpy(), model.classifier_1.weight.data.cpu().numpy().shape)
-    # print(model.features.norm0.weight.data.cpu().numpy(), model.features.norm0.weight.data.cpu().numpy().shape)
-
     if ".pth.tar" in ckpt_name:
         checkpoint_path = os.path.join(opt.checkpoints_folder, ckpt_name)
     else:
@@ -146,15 +136,7 @@ def load_densenet(model, ckpt_name, checkpoints_folder, opt, old=False):
         )
     checkpoint = torch.load(checkpoint_path)
 
-    # print(colored("Resuming from %s of epoch %d"%(checkpoint_path, checkpoint['epoch']), 'white', 'on_red'))
-
     pretrained_state_dict = checkpoint["state_dict"]
-
-    # for key in pretrained_state_dict.keys():
-    #     print(key, pretrained_state_dict[key].shape)
-    # if torch_version == '1.3.0' and old:
-    #     pretrained_state_dict = {k.replace('.denselayer', '.layers.denselayer'): v for k, v in pretrained_state_dict.items()}
-    # else:
     if torch_version >= "1.3.0":
         pretrained_state_dict = {k: v for k, v in pretrained_state_dict.items()}
     else:
@@ -162,9 +144,6 @@ def load_densenet(model, ckpt_name, checkpoints_folder, opt, old=False):
             k.replace(".layers.denselayer", ".denselayer"): v
             for k, v in pretrained_state_dict.items()
         }
-    # if torch_version == '1.3.0' and old:
-    #     pretrained_state_dict = {k.replace('.denselayer', '.layers.denselayer'): v for k, v in pretrained_state_dict.items()}
-    # else:
 
     if opt.feature_only:
         if torch_version == "1.3.0":
@@ -179,11 +158,8 @@ def load_densenet(model, ckpt_name, checkpoints_folder, opt, old=False):
                 for k, v in pretrained_state_dict.items()
                 if "classifier" not in k
             }
-    # for key in pretrained_state_dict.keys():
-    #     print(key, pretrained_state_dict[key].shape)
 
     best_loss = checkpoint["eval_loss"]
-    # model.load_state_dict(state_dict)
     state = model.state_dict()
     state.update(pretrained_state_dict)
     model.load_state_dict(state)
@@ -197,8 +173,6 @@ def load_densenet(model, ckpt_name, checkpoints_folder, opt, old=False):
 def sum_bbox_ratios(writer, vt_loss_allBoxes_list, tid, prefix, title):
     vt_loss_allBoxes_np = torch.stack(vt_loss_allBoxes_list).cpu().data.numpy().copy()
     vt_loss_allBoxes_np.sort()
-    # print(vt_loss_allBoxes_np.shape, vt_loss_allBoxes_np[:10], vt_loss_allBoxes_np[-10:])
-    # writer.add_histogram(prefix+'/vt_loss_allBoxes', vt_loss_allBoxes_np, tid, bins="doane")
     thres_ratio_dict = summary_thres(
         vt_loss_allBoxes_np,
         [0.01, 0.02, 0.03, 0.05, 0.1, 0.2, 0.3, 0.5, 0.8, 1.0],
@@ -336,16 +310,11 @@ def copy_py_files(root_path, dest_path, exclude_paths=[]):
         for file in files:
             if file.endswith(".py") or file.endswith(".yaml"):
                 origin_path = os.path.join(root, file)
-                # print(os.path.join(root, file))
-                exclude_flag = False
                 for exclude_path in exclude_paths:
                     if exclude_path != "" and exclude_path in origin_path:
-                        exclude_flag = True
                         break
                 else:
                     origin_path_list.append([origin_path, dest_path])
-                    # os.system('cp %s %s/'%(origin_path, dest_path))
-                    # print('Copied ' + origin_path)
 
     with Pool(processes=12, initializer=np.random.seed(123456)) as pool:
         for _ in list(

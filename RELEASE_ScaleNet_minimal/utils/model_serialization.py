@@ -1,12 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import logging
 from collections import OrderedDict
 
 import torch
 from maskrcnn_benchmark.utils.comm import get_rank
-from maskrcnn_benchmark.utils.comm import synchronize
-from termcolor import colored
-from utils.utils_misc import *
+from utils.utils_misc import red
+from utils.utils_misc import white_blue
 
 # from maskrcnn_benchmark.utils.imports import import_file
 
@@ -59,7 +57,7 @@ def align_and_update_state_dicts(
                 if replace_kw in current_key:
                     # print('--Rename', current_key, '--->', current_key.replace(replace_kw, replace_with_kw))
                     current_keys_filtered.append(
-                        current_key.replace(replace_kw, replace_with_kw)
+                        current_key.replace(replace_kw, replace_with_kw),
                     )
                     if_replace = True
                     break
@@ -69,7 +67,8 @@ def align_and_update_state_dicts(
         current_keys_renamed = current_keys_filtered.copy()
 
     logger.warning(
-        "====== current_keys %d; loaded keys %d" % (len(current_keys), len(loaded_keys))
+        "====== current_keys %d; loaded keys %d"
+        % (len(current_keys), len(loaded_keys)),
     )
     match_matrix = [
         (
@@ -142,15 +141,15 @@ def align_and_update_state_dicts(
         logger.warning(
             white_blue(
                 "====== Successfully loaded %d from %d possible loads."
-                % (success_loads, all_possible_loads)
-            )
+                % (success_loads, all_possible_loads),
+            ),
         )
     else:
         logger.warning(
             red(
                 "====== Successfully loaded %d from %d possible loads."
-                % (success_loads, all_possible_loads)
-            )
+                % (success_loads, all_possible_loads),
+            ),
         )
     return current_keys_ori, loaded_keys_ori
 

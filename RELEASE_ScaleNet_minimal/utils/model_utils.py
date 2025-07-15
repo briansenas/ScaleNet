@@ -1,20 +1,21 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from dataset_coco_pickle_eccv import bins_lowHigh_list_dict
-from dataset_coco_pickle_eccv import car_bins
-from dataset_coco_pickle_eccv import car_bins_layers_list
-from dataset_coco_pickle_eccv import fmm_bins_layers_list
-from dataset_coco_pickle_eccv import human_bins
-from dataset_coco_pickle_eccv import human_bins_layers_list
-from dataset_coco_pickle_eccv import v0_bins_layers_list
-from dataset_coco_pickle_eccv import yc_bins_centers
-from dataset_coco_pickle_eccv import yc_bins_layers_list
 from dataset_cvpr import horizon_bins_centers
 from dataset_cvpr import pitch_bins_centers
 from dataset_cvpr import roll_bins_centers
 from dataset_cvpr import vfov_bins_centers
 from maskrcnn_benchmark.structures.bounding_box import BoxList
+
+from .utils_coco import bins_lowHigh_list_dict
+from .utils_coco import car_bins
+from .utils_coco import car_bins_layers_list
+from .utils_coco import fmm_bins_layers_list
+from .utils_coco import human_bins
+from .utils_coco import human_bins_layers_list
+from .utils_coco import v0_bins_layers_list
+from .utils_coco import yc_bins_centers
+from .utils_coco import yc_bins_layers_list
 
 pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
 pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
