@@ -6,9 +6,12 @@ import utils.model_utils as model_utils
 from termcolor import colored
 from utils import utils_coco
 from utils.checkpointer import DetectronCheckpointer
-from utils.train_utils import green
-from utils.train_utils import white_blue
-from utils.utils_misc import *
+from utils.utils_misc import bbox_list_to_list_of_bboxes
+from utils.utils_misc import green
+from utils.utils_misc import list_of_bboxes_to_bboxes_padded
+from utils.utils_misc import list_of_tensor_to_tensor_padded
+from utils.utils_misc import prob_to_est
+from utils.utils_misc import white_blue
 
 from .model_part_GeneralizedRCNNRuiMod_cameraCalib_sep_maskrcnnPose_hybrid import (
     GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose,
@@ -1685,6 +1688,4 @@ class RCNNOnly_combine(nn.Module):
 
 
 if __name__ == "__main__":
-    from torchsummary import summary
-
-    summary(Densenet, (3, 224, 224))
+    pass

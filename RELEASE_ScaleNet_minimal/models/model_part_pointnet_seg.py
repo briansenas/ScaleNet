@@ -1,7 +1,15 @@
 import torch
 import torch.nn as nn
+from pointnet.pointnet_part_seg import Conv1d
+from pointnet.pointnet_part_seg import F
+from pointnet.pointnet_part_seg import MLP
+from pointnet.pointnet_part_seg import PointNetPartSeg
+from pointnet.pointnet_part_seg import set_bn
+from pointnet.pointnet_part_seg import SharedMLP
+from pointnet.pointnet_part_seg import Stem
+from pointnet.pointnet_part_seg import TNet
+from pointnet.pointnet_part_seg import xavier_uniform
 
-from pointnet_part_seg import *
 
 class CamHPersonHPointNet(nn.Module):
     """PointNet for part segmentation
@@ -11,22 +19,24 @@ class CamHPersonHPointNet(nn.Module):
 
     """
 
-    def __init__(self,
-                 opt,
-                 in_channels,
-                 num_classes_camH,
-                 num_classes_v0,
-                 num_classes_fmm,
-                 num_seg_classes,
-                 stem_channels=(64, 128, 128),
-                 local_channels=(512, 2048),
-                 cls_channels=(256, 256),
-                 seg_channels=(256, 256, 128),
-                 dropout_prob_cls=0.3,
-                 dropout_prob_seg=0.2,
-                 with_transform=True,
-                 with_bn=True,
-                 if_cls=True):
+    def __init__(
+        self,
+        opt,
+        in_channels,
+        num_classes_camH,
+        num_classes_v0,
+        num_classes_fmm,
+        num_seg_classes,
+        stem_channels=(64, 128, 128),
+        local_channels=(512, 2048),
+        cls_channels=(256, 256),
+        seg_channels=(256, 256, 128),
+        dropout_prob_cls=0.3,
+        dropout_prob_seg=0.2,
+        with_transform=True,
+        with_bn=True,
+        if_cls=True,
+    ):
         """
 
         Args:
@@ -41,7 +51,7 @@ class CamHPersonHPointNet(nn.Module):
            with_transform (bool): whether to use TNet to transform features.
 
         """
-        super(CamHPersonHPointNet, self).__init__()
+        super().__init__()
 
         self.opt = opt
 
@@ -54,34 +64,66 @@ class CamHPersonHPointNet(nn.Module):
         self.with_transform = with_transform
         self.if_cls = if_cls
 
-
         # stem
-        self.stem = Stem(in_channels, stem_channels, with_transform=with_transform, bn=with_bn)
+        self.stem = Stem(
+            in_channels,
+            stem_channels,
+            with_transform=with_transform,
+            bn=with_bn,
+        )
         self.mlp_local = SharedMLP(stem_channels[-1], local_channels, bn=with_bn)
 
         if self.if_cls:
             # classification
             # Notice that we apply dropout to each classification mlp.
             # -- pointnet_camH_refine
-            self.mlp_cls = MLP(local_channels[-1], cls_channels, dropout_prob=dropout_prob_cls, bn=with_bn)
+            self.mlp_cls = MLP(
+                local_channels[-1],
+                cls_channels,
+                dropout_prob=dropout_prob_cls,
+                bn=with_bn,
+            )
             self.cls_logit = nn.Linear(cls_channels[-1], num_classes_camH, bias=True)
 
             # -- pointnet_fmm_refine
             if self.opt.pointnet_fmm_refine:
-                self.mlp_cls_fmm = MLP(local_channels[-1], cls_channels, dropout_prob=dropout_prob_cls, bn=with_bn)
-                self.cls_logit_fmm = nn.Linear(cls_channels[-1], num_classes_fmm, bias=True)
+                self.mlp_cls_fmm = MLP(
+                    local_channels[-1],
+                    cls_channels,
+                    dropout_prob=dropout_prob_cls,
+                    bn=with_bn,
+                )
+                self.cls_logit_fmm = nn.Linear(
+                    cls_channels[-1],
+                    num_classes_fmm,
+                    bias=True,
+                )
 
             # -- pointnet_v0_refine
             if self.opt.pointnet_v0_refine:
-                self.mlp_cls_v0 = MLP(local_channels[-1], cls_channels, dropout_prob=dropout_prob_cls, bn=with_bn)
-                self.cls_logit_v0 = nn.Linear(cls_channels[-1], num_classes_v0, bias=True)
+                self.mlp_cls_v0 = MLP(
+                    local_channels[-1],
+                    cls_channels,
+                    dropout_prob=dropout_prob_cls,
+                    bn=with_bn,
+                )
+                self.cls_logit_v0 = nn.Linear(
+                    cls_channels[-1],
+                    num_classes_v0,
+                    bias=True,
+                )
 
         # part segmentation
         # Notice that the original repo concatenates global feature, one hot class embedding,
         # stem features and local features. However, the paper does not use last local feature.
         # Here, we follow the released repo.
         in_channels_seg = local_channels[-1] + sum(stem_channels) + sum(local_channels)
-        self.mlp_seg = SharedMLP(in_channels_seg, seg_channels[:-1], dropout_prob=dropout_prob_seg, bn=with_bn)
+        self.mlp_seg = SharedMLP(
+            in_channels_seg,
+            seg_channels[:-1],
+            dropout_prob=dropout_prob_seg,
+            bn=with_bn,
+        )
         self.conv_seg = Conv1d(seg_channels[-2], seg_channels[-1], 1)
         self.seg_logit = nn.Conv1d(seg_channels[-1], num_seg_classes, 1, bias=True)
 
@@ -110,31 +152,40 @@ class CamHPersonHPointNet(nn.Module):
             local_features.append(x)
 
         # max pool over points
-        global_feature, max_indices = torch.max(x, 2)  # (batch_size, local_channels[-1])
-        end_points['key_point_inds'] = max_indices
+        global_feature, max_indices = torch.max(
+            x,
+            2,
+        )  # (batch_size, local_channels[-1])
+        end_points["key_point_inds"] = max_indices
 
         if self.if_cls:
             # classification
             x = global_feature
             x = self.mlp_cls(x)
             cls_logit = self.cls_logit(x)
-            preds.update({
-                    "cls_logit": cls_logit
-                })
+            preds.update(
+                {
+                    "cls_logit": cls_logit,
+                },
+            )
 
             if self.opt.pointnet_fmm_refine:
                 x_fmm = self.mlp_cls_fmm(global_feature)
                 cls_logit_fmm = self.cls_logit_fmm(x_fmm)
-                preds.update({
-                    "cls_logit_fmm": cls_logit_fmm
-                })
+                preds.update(
+                    {
+                        "cls_logit_fmm": cls_logit_fmm,
+                    },
+                )
 
             if self.opt.pointnet_v0_refine:
                 x_v0 = self.mlp_cls_v0(global_feature)
                 cls_logit_v0 = self.cls_logit_v0(x_v0)
-                preds.update({
-                    "cls_logit_v0": cls_logit_v0
-                })
+                preds.update(
+                    {
+                        "cls_logit_v0": cls_logit_v0,
+                    },
+                )
 
         # segmentation
         global_feature_expand = global_feature.unsqueeze(2).expand(-1, -1, num_points)
@@ -148,9 +199,11 @@ class CamHPersonHPointNet(nn.Module):
         x = self.conv_seg(x)
         seg_logit = self.seg_logit(x)
 
-        preds.update({
-            "seg_logit": seg_logit
-        })
+        preds.update(
+            {
+                "seg_logit": seg_logit,
+            },
+        )
         preds.update(end_points)
 
         return preds
@@ -187,7 +240,7 @@ class PointNetPartSegLoss(nn.Module):
     """Pointnet part segmentation loss with optional regularization loss"""
 
     def __init__(self, reg_weight, cls_loss_weight, seg_loss_weight):
-        super(PointNetPartSegLoss, self).__init__()
+        super().__init__()
         self.reg_weight = reg_weight
         self.cls_loss_weight = cls_loss_weight
         self.seg_loss_weight = seg_loss_weight
@@ -210,15 +263,28 @@ class PointNetPartSegLoss(nn.Module):
         # regularization over transform matrix
         if self.reg_weight > 0.0:
             trans_feature = preds["trans_feature"]
-            trans_norm = torch.bmm(trans_feature.transpose(2, 1), trans_feature)  # [in, in]
-            I = torch.eye(trans_norm.size(2), dtype=trans_norm.dtype, device=trans_norm.device)
-            reg_loss = F.mse_loss(trans_norm, I.unsqueeze(0).expand_as(trans_norm), reduction="sum")
-            loss_dict["reg_loss"] = reg_loss * (0.5 * self.reg_weight / trans_norm.size(0))
+            trans_norm = torch.bmm(
+                trans_feature.transpose(2, 1),
+                trans_feature,
+            )  # [in, in]
+            I = torch.eye(
+                trans_norm.size(2),
+                dtype=trans_norm.dtype,
+                device=trans_norm.device,
+            )
+            reg_loss = F.mse_loss(
+                trans_norm,
+                I.unsqueeze(0).expand_as(trans_norm),
+                reduction="sum",
+            )
+            loss_dict["reg_loss"] = reg_loss * (
+                0.5 * self.reg_weight / trans_norm.size(0)
+            )
 
         return loss_dict
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     batch_size = 32
     in_channels = 3
     num_points = 1024
@@ -229,9 +295,9 @@ if __name__ == '__main__':
     cls_label = torch.randint(num_classes, (batch_size,))
     transform = TNet()
     out = transform(points)
-    print('TNet', out.shape)
+    print("TNet", out.shape)
 
     pointnet = PointNetPartSeg(in_channels, num_classes, num_seg_classes)
     out_dict = pointnet({"points": points, "cls_label": cls_label})
     for k, v in out_dict.items():
-        print('PointNet:', k, v.shape)
+        print("PointNet:", k, v.shape)
