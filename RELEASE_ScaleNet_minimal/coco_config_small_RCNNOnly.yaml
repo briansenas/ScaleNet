@@ -2,21 +2,16 @@
 
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNNRui"
-#  RCNN_WEIGHT: "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/maskrcnn/pretrained/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-  RCNN_WEIGHT_BACKBONE: "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/maskrcnn/pretrained/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-#  RCNN_WEIGHT_BACKBONE: "1105Morning-mm1_SUN360RCNN-HorizonPitchRollVfovNET_myDist_fix_bs16on4_le5e-3_unfreeezeFeat_indeptClsHeads"
-  RCNN_WEIGHT_BOX_HEAD: "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/maskrcnn/pretrained/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-#  RCNN_WEIGHT_BOX_HEAD: "1105Morning-mm1_SUN360RCNN-HorizonPitchRollVfovNET_myDist_fix_bs16on4_le5e-3_unfreeezeFeat_indeptClsHeads"
-  RCNN_WEIGHT_CLS_HEAD: "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/maskrcnn/pretrained/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-#  RCNN_WEIGHT_CLS_HEAD: "1105Morning-mm1_SUN360RCNN-HorizonPitchRollVfovNET_myDist_fix_bs16on4_le5e-3_unfreeezeFeat_indeptClsHeads"
-#  RCNN_WEIGHT_CLS_HEAD: "catalog://ImageNetPretrained/MSRA/R-50"
+  RCNN_WEIGHT_BACKBONE: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+  RCNN_WEIGHT_BOX_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+  RCNN_WEIGHT_CLS_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
 
+# What is this check point?
   DENSENET_WEIGHT: "model_best.pth.tar"
 #  DENSENET_WEIGHT: "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/adobe_camera_calibration_cvpr18/checkpoint/1031e_firstTrain-HorizonPitchRollVfovNET/model_best.pth.tar"
 
   BACKBONE:
     CONV_BODY: FBNet
-#    CONV_BODY_OF_CLS_HEAD: "R-50-FPN"
 
   FBNET:
     ARCH: "cham_v1a"
@@ -24,15 +19,6 @@ MODEL:
     WIDTH_DIVISOR: 8
     DW_CONV_SKIP_BN: True
     DW_CONV_SKIP_RELU: True
-#  RPN:
-#    ANCHOR_SIZES: (32, 64, 128, 256, 512)
-#    ANCHOR_STRIDE: (16, )
-#    BATCH_SIZE_PER_IMAGE: 256
-#    PRE_NMS_TOP_N_TRAIN: 6000
-#    PRE_NMS_TOP_N_TEST: 6000
-#    POST_NMS_TOP_N_TRAIN: 2000
-#    POST_NMS_TOP_N_TEST: 200
-#    RPN_HEAD: FBNet.rpn_head
   ROI_HEADS:
     BATCH_SIZE_PER_IMAGE: 128
   ROI_BOX_HEAD:
@@ -46,21 +32,9 @@ MODEL:
     FEATURE_EXTRACTOR: FBNet.roi_head
     NUM_CLASSES: 256
     PREDICTOR: FCPredictorRui
-    # new: https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml
-#    POOLER_RESOLUTION: 7
-#    POOLER_SCALES: (0.25, 0.125, 0.0625, 0.03125)
-#    POOLER_SAMPLING_RATIO: 2
-#    FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractorRui"
-#    NUM_CLASSES: 256
-#    PREDICTOR: FPNPredictorRui
   HUMAN:
     MEAN: 1.70
-#    STD: 0.103
     STD: 0.2
-#DATASETS:
-  # TRAIN: ("coco_2017_train", "coco_2017_val")
-#  TRAIN: ("coco_2017_train",)
-  # TEST: ("coco_2017_val",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:
@@ -69,7 +43,6 @@ SOLVER:
   WEIGHT_DECAY: 0.0001
   STEPS: (160000, 200000)
   MAX_ITER: 900000
-#  STEP_LR_SIZE: 300
   IMS_PER_BATCH: 4 # should be divisible by the number of GPUs
   PERSON_WEIGHT: 0.01
 TEST:
