@@ -5,7 +5,7 @@ import time
 import os
 import os.path
 import sys
-from math import radians, degrees
+from math import degrees
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.misc import imread, imsave
 
@@ -217,6 +217,7 @@ def extractImage(
 
 
 def demo():
+    # NOTE: What is this?
     imgdir = "/home/j/Documents/GitRepos/OutdoorIllumination/data/"
     imglist = ["pano_askvbepeztrtfo.jpg", "pano_awouoctwfnhqsv.jpg"]
 
@@ -262,28 +263,4 @@ def demo():
 
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description='SUN360 dataset preparation for Image2Lightning')
-    # parser.add_argument('inputsrc', type=str, help='Input environment map directory or file.')
-    # parser.add_argument('output', type=str, help='Output data directory')
-    # parser.add_argument('--fov', type=float, default=60., help="FOV of the simulated camera (degrees)")
-    # parser.add_argument('--coveredangle', type=int, default=360, choices=[180, 360], help='Angle covered by the reconstructed envmap (180 or 360)')
-    # parser.add_argument('--mode', type=str, default='full', choices=['full', 'crop'], help='Type of input to produce: "crop" provides only the cropped (redressed) image, as a camera could take. "full" provides the full envmap to the network, but masked everywhere except in the relevant part.')
-    # parser.add_argument('--overlap', type=int, default=0, help='Overlapping (in degrees) between each crop (default 0)')
-    # parser.add_argument('--flip', type=int, default=0, help='Also flip the images to produce 2x the number of samples')
-    # parser.add_argument('--envmapheight', type=int, default=160, help='Height of the envmap to produce')
-    # parser.add_argument('--croppedheight', type=int, default=160, help='Height of the cropped region (only used if inputtype == "crop")')
-    # parser.add_argument('--color', type=bool, default=True, help='Output color or gray images')
-    # parser.add_argument('--interporder', type=int, default=1, help='Order of the interpolation (0=nearest neighbor, 1=bilinear, etc.)')
-    # parser.add_argument('--nprocesses', type=int, default=0, help='Number of concurrent processes to use. Default is 0, meaning number of available cores.')
-    # parser.add_argument('--fillwith', type=str, default='sample', choices=['zero', 'sample', 'random'], help='How to fill the masked regions : zeros (with 0), random (random data from 0-1 uniform), sample (sample pixels from the non-masked part at random)')
-    # args = parser.parse_args()
     demo()
-
-    # nprocesses = args.nprocesses if args.nprocesses > 0 else multiprocessing.cpu_count()
-    # print('Using {} processes'.format(nprocesses))
-
-    # p = multiprocessing.Pool(nprocesses)
-    # r = p.map(processEnvmap, tasklist)
-
-    # successN = sum(f[0] for f in r)
-    # print('Done! Processed {} images over {} possible'.format(successN, len(tasklist)))
