@@ -37,21 +37,6 @@ def plotPerformance(output_dir, data_pitch):
     )
     plt.close()
 
-    # data_roll_abs = np.abs(data_roll)*180/np.pi
-
-    # dras = np.sort(data_roll_abs)
-    # cdf = np.linspace(0, 1, dras.size)
-
-    # ud = np.unique(dras)
-    # ui = np.unique(dras, return_index=True)[1]
-
-    # plt.plot(ud, cdf[ui])
-    # plt.xlim([0, 4])
-    # plt.xlabel('Roll error (degree)')
-    # plt.ylabel('% Correct')
-    # plt.savefig(os.path.join(output_dir, "roll_error.png"), bbox_inches='tight', dpi=150)
-    # plt.close()
-
 
 def drawLine(image, hl, hr, leftright=(None, None), color=(0, 255, 0), width=5):
     # hl, hr: [top: 1, bottom: 0]
@@ -192,7 +177,3 @@ if __name__ == "__main__":
         im = imread(fp[i], "native")[:, :, :3]
         imout = showHorizonLine(im, vfov[i], pitch[i], roll[i], debug=True)
         imsave(f"{i:03d}.png", imout)
-        # plt.clf()
-        # plt.imshow(imout)
-        # plt.show(block=False)
-        # plt.pause(1)

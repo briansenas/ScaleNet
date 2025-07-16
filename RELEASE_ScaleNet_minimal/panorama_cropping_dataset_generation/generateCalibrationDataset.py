@@ -19,9 +19,8 @@ from tqdm import tqdm
 DEBUG = False
 DISPLAY = False
 
-input_dir = "data/ruizhu/SUN360/pano9104x4552"
-# output_dir = "data/ruizhu/SUN360/crops_dataset_cvpr_myDistNarrowerLarge1105"
-output_dir = "data/ruizhu/SUN360/crops_dataset_cvpr_myDistWider20200403"
+input_dir = "data/SUN360/train/RGB/"
+output_dir = "data/crops_dataset_cvpr_myDistWider20200403"
 
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(os.path.join(output_dir, "debug"), exist_ok=True)

@@ -6,9 +6,6 @@ if sys.version >= "3":
 else:
     from contextdecorator import ContextDecorator
 
-import numpy as np
-from PIL import Image, ImageDraw
-
 
 QUIET = "QUIET" in sys.argv
 

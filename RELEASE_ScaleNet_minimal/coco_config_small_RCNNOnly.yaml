@@ -8,7 +8,6 @@ MODEL:
 
 # What is this check point?
   DENSENET_WEIGHT: "model_best.pth.tar"
-#  DENSENET_WEIGHT: "/home/ruizhu/Documents/Projects/adobe_rui_camera-calibration-redux/adobe_camera_calibration_cvpr18/checkpoint/1031e_firstTrain-HorizonPitchRollVfovNET/model_best.pth.tar"
 
   BACKBONE:
     CONV_BODY: FBNet

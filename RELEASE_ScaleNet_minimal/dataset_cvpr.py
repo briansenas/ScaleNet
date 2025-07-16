@@ -19,17 +19,7 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
 pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
 
-# DS_ROOT = "/home/holdgeof/data/dimension_match_image_crops/"
-# DS_ROOT = "/home/holdgeof/data/sun360_sphericaldistortion"
-# DS_ROOT = "/newfoundland/data_extra/SUN360/crops_dataset_old"
-# DS_ROOT = "data/SUN360/sun360_sphericaldistortion_oriDist_full"
-# DS_ROOT = 'data/SUN360/crops_dataset_kalyan'
-# DS_ROOT = 'data/SUN360/crops_dataset_cvpr_myDist'
-
-
-# DS_ROOT = 'data/SUN360/crops_dataset_cvpr_myDistNarrowerLarge1105' # ECCV submission: SUNV1
 DS_ROOT = "data/SUN360_mini_crops_dataset_cvpr_myDistNarrowerLarge1105"
-# DS_ROOT = 'data/SUN360/crops_dataset_cvpr_myDistWider20200403' # SUNV2
 
 if "Narrower" in DS_ROOT:
     # crops_dataset_cvpr_myDistNarrower

@@ -15,23 +15,12 @@ from termcolor import colored
 
 # NOTE: What is this directory
 results_path_yannick = "data/coco_results/yannick_results_train2017_filtered"
-# image_path = '/home/ruizhu/Documents/Projects/adobe_scale_est/data/COCO/train2017'
-# bbox_path = '/home/ruizhu/Documents/Projects/adobe_scale_est/data/coco_results/imgs_with_morethan2_standing_persons_allVis_train2017_2'
-
-# bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_allVis_train2017_2'
-
-# new dataset 2020
-# bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200101-2'
-# bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200103-v4'
-# bbox_path = 'data/COCO/coco_results/imgs_with_morethan2_standing_persons_train2017_20200103-v5_ratio2-8'
 
 pickle_paths = {
-    # 'test': 'data/COCO/coco_results/results_with_kps_20200225_val2017-vis_filtered_2-8_moreThan2/pickle'}
     "train-val": "data/coco_results/results_with_kps_20200208_morethan2_2-8/pickle",
     "test": "data/coco_results/results_with_kps_20200225_val2017_test_detOnly_filtered_2-8_moreThan2/pickle",
 }
 
-# pickle_paths['train-val'] = 'data/COCO/coco_results/results_with_kps_20200221_Car_noSmall-ratio1-35-mergeWith-kps_20200208_morethan2_2-8/pickle' #MultiCat
 pickle_paths["test"] = (
     "/results_test_20200302_Car_noSmall-ratio1-35-mergeWith-results_with_kps_20200225_train2017_detOnly_filtered_2-8_moreThan2/pickle"  # MultiCat
 )

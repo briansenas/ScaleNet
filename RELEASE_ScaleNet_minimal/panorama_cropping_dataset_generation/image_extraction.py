@@ -219,11 +219,6 @@ def extractImage(
 def demo():
     imgdir = "/home/j/Documents/GitRepos/OutdoorIllumination/data/"
     imglist = ["pano_askvbepeztrtfo.jpg", "pano_awouoctwfnhqsv.jpg"]
-    #    extractImage('/home/j/Documents/GitRepos/OutdoorIllumination/data/pano_askvbepeztrtfo.jpg', (0, np.pi/2), 256, 0) #, mode="maskbool")
-    #    exit()
-
-    #    from panotools import sun360_tools
-    #    img_paths = sun360_tools.getImageList('/home/j/Documents/GitRepos/OutdoorIllumination/data/pano_askvbepeztrtfo.jpg')
 
     os.makedirs(imgdir + "output", exist_ok=True)
 
@@ -263,8 +258,6 @@ def demo():
                         ),
                         mask.astype("uint8"),
                     )
-                    # imsave(os.path.join('output', "{}_mask_{}.png".format(basename, imid)), mask.astype('uint8'))
-
                     imid += 1
 
 
