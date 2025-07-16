@@ -4,7 +4,6 @@ import torch.nn as nn
 import utils.model_utils as model_utils
 from utils import utils_coco
 from utils.train_utils import f_pixels_to_mm
-from utils.utils_misc import *
 
 cpu_device = torch.device("cpu")
 
@@ -99,29 +98,6 @@ def train_batch_combine(
     )
     loss_dict = {}
     return_dict = {}
-
-    # if not is_training:
-    #     import matplotlib.pyplot as plt
-    #     from matplotlib.patches import Rectangle
-    #     image_sizes_ori = [(input_dict['W_batch_array'][0], input_dict['H_batch_array'][0])]
-    #     predictions = output_RCNN['predictions']
-    #     # print('====predictions', predictions, predictions[0].fields(), predictions[0].get_field('keypoints'))
-    #     prediction_list, prediction_list_ori = model.RCNN.post_process(predictions, image_sizes_ori)
-    #     # print('====prediction_list', prediction_list, prediction_list[0].fields(), prediction_list[0].get_field('keypoints'))
-    #     image_batch_list_ori = [plt.imread(input_dict['im_file'][0])]
-    #     result_list, top_prediction_list = model.RCNN.select_and_vis_bbox(prediction_list_ori, image_batch_list_ori)
-    #     # print('====top_prediction_list', top_prediction_list, top_prediction_list[0].fields(), top_prediction_list[0].get_field('keypoints'))
-    #
-    #     target_list = input_dict['target_maskrcnnTransform_list']
-    #     bboxes_gt = target_list[0].get_field('boxlist_ori').convert("xywh").bbox.numpy()
-    #     plt.figure(figsize=(20, 20))
-    #     plt.imshow(result_list[0])
-    #     ax = plt.gca()
-    #     for bbox_gt in bboxes_gt:
-    #         # print(bbox_gt)
-    #         rect = Rectangle((bbox_gt[0], bbox_gt[1]), bbox_gt[2], bbox_gt[3], linewidth=10, edgecolor='lime', facecolor='none')
-    #         ax.add_patch(rect)
-    #     plt.show()
 
     if opt.est_kps:
         loss_dict.update(
@@ -341,30 +317,6 @@ def train_batch_combine(
             input_dict_show["target_maskrcnnTransform_list"] = input_dict[
                 "target_maskrcnnTransform_list"
             ]
-            # import matplotlib.pyplot as plt
-            # from matplotlib.patches import Rectangle
-            # image_sizes_ori = [(w, h) for w, h in zip(input_dict['W_batch_array'], input_dict['H_batch_array'])]
-            # predictions = output_RCNN['predictions']
-            # # print('====predictions', predictions, predictions[0].fields(), predictions[0].get_field('keypoints'))
-            # prediction_list, prediction_list_ori = model.RCNN.post_process(predictions, image_sizes_ori)
-            # # print('====prediction_list', prediction_list, prediction_list[0].fields(), prediction_list[0].get_field('keypoints'))
-            # image_batch_list_ori = [plt.imread(im_file) for im_file in input_dict['im_file']]
-            # result_list, top_prediction_list = model.RCNN.select_and_vis_bbox(prediction_list_ori, image_batch_list_ori)
-            # # print('====top_prediction_list', top_prediction_list, top_prediction_list[0].fields(), top_prediction_list[0].get_field('keypoints'))
-            # input_dict_show['result_list_pose'] = result_list
-            # target_list = input_dict['target_maskrcnnTransform_list']
-            # for idx, (target, result) in enumerate(zip(target_list, result_list)):
-            #     bboxes_gt = target.get_field('boxlist_ori').convert("xywh").bbox.numpy()
-            #     plt.figure(figsize=(20, 20))
-            #     plt.imshow(result)
-            #     # ax = plt.gca()
-            #     # for bbox_gt in bboxes_gt:
-            #     #     # print(bbox_gt)
-            #     #     rect = Rectangle((bbox_gt[0], bbox_gt[1]), bbox_gt[2], bbox_gt[3], linewidth=2, edgecolor='lime', facecolor='none')
-            #     #     ax.add_patch(rect)
-            #     plt.title('%d'%idx)
-            #     plt.show()
-
         if opt.train_cameraCls:
             input_dict_show["reduce_method"] = [reduce_method] * num_samples
             input_dict_show["v0_batch_predict"] = (
@@ -442,9 +394,6 @@ def train_batch_combine(
                 },
             )
 
-            # input_dict_show['horizon_est'] = {'output_horizon': nn.functional.softmax(output_horizon, dim=1).detach().cpu().numpy(), \
-            #                                   'horizon_estim': horizon_estim.detach().cpu().numpy(), \
-            #                                   'horizon_bins': [bins['horizon_bins_centers_torch'].cpu().numpy()] * num_samples, 'num_samples': num_samples}
             input_dict_show["output_horizon_COCO"] = (
                 output_RCNN["output_horizon"].detach().cpu().numpy()
             )
@@ -489,9 +438,6 @@ def train_batch_combine(
                                 ],
                             },
                         )
-                # print('||||||||output_RCNN vt_camEst_N_delta_np_list', output_RCNN['vt_camEst_N_delta?_np_list'])
-                # print('||||||||output_RCNN person_hs_est_np_list', output_RCNN['person_hs_est_np_list'])
-
                 if not opt.direct_camH:
                     input_dict_show["output_camH_COCO"] = (
                         output_RCNN["output_yc_batch"].detach().cpu().numpy()

@@ -71,13 +71,11 @@ def eval_epoch_combine_RCNNOnly(
 
     return_dict_epoch = {}
 
-    # if_vis_kps = random.random() < 0.1
     if_vis_kps = True
 
     with torch.no_grad():
         with tqdm(total=len(eval_loader)) as t:
             t.set_description(f"Ep.{epoch} Eval")
-            # for i, (input_, pitch, roll, vfov, distortion, metadata) in enumerate(training_loader):
             for i, (
                 inputCOCO_Image_maskrcnnTransform_list,
                 W_batch_array,
@@ -193,9 +191,6 @@ def eval_epoch_combine_RCNNOnly(
 
                     im_filename_list += list(im_filename)
 
-                    # print('-----1', loss_dict, rank)
-                    # loss_dict_reduced = reduce_loss_dict(loss_dict, mark=i, logger=logger) # **average** over multi GPUs
-                    # print('-----2', loss_dict_reduced, rank)
                     losses = sum(loss for loss in loss_dict_reduced.values())
                     loss_list.append(losses.item())
 
@@ -208,12 +203,7 @@ def eval_epoch_combine_RCNNOnly(
                         )
                         input_dict_show = input_dict_show_list[0]
 
-                        # input_dict_show = {key: input_dict_show[key][0] for key in input_dict_show.keys()}
-                        # for key in input_dict_show.keys():
-                        #     print('--', key, input_dict_show[key])
-                        #     print('------', input_dict_show[key])
                     prefix, postfix = prepostfix.split("|")
-                    # if opt.train_cameraCls and opt.train_roi_h and opt.pointnet_camH:
                     if opt.train_cameraCls:
                         vis_utils.show_cam_bbox(
                             io.imread(input_dict_show["im_path"]),
@@ -489,10 +479,6 @@ def eval_epoch_combine_RCNNOnly(
                     bins="doane",
                 )
 
-                # from scipy.io import savemat
-                # savemat('camH_tid%d.mat'%tid, {'camH_est_all': camH_est_list_concat_all, 'camH_fit_all': camH_fit_list_concat_all})
-
-                # writer.flush()
         if opt.est_kps:
             return_dict_epoch.update({"eval_loss_kp_list": eval_loss_kp_list})
             if rank == 0 and writer is not None:

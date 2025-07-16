@@ -397,6 +397,9 @@ if __name__ == "__main__":
         print("After location 2", new_obj.location)
         bpy.context.view_layer.update()
 
+    # Remove main objects
+    for obj in all_obj_names:
+        bpy.data.objects.remove(bpy.data.objects[obj], do_unlink=True)
     ts = time.time()
     performRendering(
         "render_{}".format("all"),
