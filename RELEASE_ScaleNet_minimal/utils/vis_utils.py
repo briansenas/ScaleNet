@@ -4,6 +4,7 @@ import os
 import pathlib
 import random
 import string
+from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -361,7 +362,6 @@ def show_cam_bbox(
 
     if if_show and not if_return:
         plt.show()
-        print("plt.show()")
         if if_pause:
             if_delete = input(colored("Pause", "white", "on_blue"))
 
@@ -631,41 +631,61 @@ def blender_render(
     input_dict_show,
     output_RCNN,
     im_file,
-    save_path="./",
-    if_show=False,
+    save_path="rendering/blender",
+    if_show=True,
     save_name="",
     tmp_code="iamgroot",
+    render_type="cylinder",
+    if_compact=False,
+    pick=-1,
+    grid=False,
+    *,
+    blender_path="/snap/bin/blender",
+    current_dir=".",
 ):
+    assert render_type in ["chair", "cylinder"]
+    scene_path = current_dir + "/rendering/scene_chair_fix.blend"
+    script_path = current_dir + "/rendering/render_coco_obj_ref.py"
 
-    tmp_code = "".join(
-        [random.choice(string.ascii_letters + string.digits) for n in range(32)],
-    )
-
-    currentdir = PATH
-    blender_path = "/snap/bin/blender"
-    scene_path = os.path.join(currentdir, os.pardir, "rendering/scene_chair_fix.blend")
-    script_path = os.path.join(
-        currentdir,
-        os.pardir,
-        "rendering/render_coco_rui_cylinder_all_fix_final.py",
-    )
+    W = input_dict_show["W_batch_array"]
+    H = input_dict_show["H_batch_array"]
 
     insertion_points_xy_list = []
     bboxes_filter = input_dict_show["bbox_gt"]
-    for bbox in bboxes_filter:
-        insertion_points_xy_list.append([bbox[0], bbox[1] + bbox[3]])
-
-    temp_folder = os.path.join(currentdir, "temp")
-    os.makedirs(temp_folder, exist_ok=True)
-    npy_path = os.path.join(temp_folder, "tmp_insert_pts_" + tmp_code)
-    np.save(npy_path, insertion_points_xy_list)
     bbox_hs_list = [a.item() for a in input_dict_show["bbox_h"]]
-    npy_path = os.path.join(temp_folder, "tmp_bbox_hs_" + tmp_code)
-    np.save(npy_path, bbox_hs_list)
+    for bbox in bboxes_filter:
+        insertion_points_xy_list.append([bbox[0] + bbox[2] / 2.0, bbox[1] + bbox[3]])
+
+    if pick != -1:
+        insertion_points_xy_list = [insertion_points_xy_list[pick]]
+        bbox_hs_list = [bbox_hs_list[pick]]
+
+    u_start_end = [W / 4.0, W / 4.0 * 3.0]
+    u_grid_size = (u_start_end[1] - u_start_end[0]) / 2.0
+    v_start_end = [H - input_dict_show["v0_batch_from_pitch_vfov"] + 10, H]
+    v_grid_size = (v_start_end[1] - v_start_end[0]) / 4.0
+
+    if grid:
+        for u in range(3):
+            for v in range(5):
+                #         if v > 0:
+                #             continue
+                insertion_points_xy_list.append(
+                    [
+                        u_start_end[0] + u_grid_size * u,
+                        v_start_end[0] + v_grid_size * v,
+                    ],
+                )
+                bbox_hs_list += [2.5 / (v + 1)]
+
+    tmp_dir = Path("rendering/tmp_dir")
+    tmp_dir.mkdir(exist_ok=True)
+    npy_path = tmp_dir / ("tmp_insert_pts_" + tmp_code)
+    np.save(str(npy_path), insertion_points_xy_list)
+    npy_path = tmp_dir / ("tmp_bbox_hs_" + tmp_code)
+    np.save(str(npy_path), bbox_hs_list)
 
     im_filepath = im_file[0]
-    im_ori = plt.imread(im_filepath)
-    H, W = im_ori.shape[:2]
     insertion_points_x = -1
     insertion_points_y = -1
     ppitch = output_RCNN["pitch_batch_est"].cpu().numpy()[0]
@@ -674,16 +694,16 @@ def blender_render(
     hhfov = np.arctan(W / 2.0 / ffpixels) * 2.0
     h_cam = output_RCNN["yc_est_batch"].cpu().numpy()[0]
 
-    print("======blender, h_cam: %.2f" % h_cam)
-
+    npy_path = Path(current_dir) / tmp_dir
     rendering_command = "{} {} --background --python {}".format(
         blender_path,
         scene_path,
         script_path,
     )
     rendering_command_append = (
-        " -- -img_path %s -tmp_code %s -H %d -W %d -insertion_points_x %d -insertion_points_y %d -pitch %.6f -fov_h %.6f -fov_v %.6f -cam_h %.6f"
+        " -- -npy_path %s -img_path %s -tmp_code %s -H %d -W %d -insertion_points_x %d -insertion_points_y %d -pitch %.6f -fov_h %.6f -fov_v %.6f -cam_h %.6f -obj-name %s"
         % (
+            str(npy_path),
             im_filepath,
             tmp_code,
             H,
@@ -694,16 +714,13 @@ def blender_render(
             hhfov,
             vvfov,
             h_cam,
+            render_type,
         )
     )
     rendering_command = rendering_command + rendering_command_append
+    print(rendering_command)
 
     os.system(rendering_command)
-
-    render_file = os.path.join(
-        currentdir,
-        "rendering/render/render_all_%s.png" % tmp_code,
-    )
 
     if if_show == False:
         plt.ioff()
@@ -718,16 +735,13 @@ def blender_render(
         ax.get_yaxis().set_visible(False)
         plt.autoscale(tight=True)
 
-    full_frame(15, 15)
+    if if_compact:
+        full_frame(15, 15)
+    render_file = current_dir + "/rendering/render/render_all_%s.png" % tmp_code
     im_render = plt.imread(render_file)
     plt.imshow(im_render)
-    plt.axis("off")
-    plt.xlim([0, W])
-    plt.ylim([H, 0])
-    ax = plt.gca()
-    ax.set_axis_off()
-    plt.autoscale(tight=True)
 
+    ax = plt.gca()
     input_dict = input_dict_show
     if "bbox_gt" in input_dict:
         for bbox in input_dict["bbox_gt"]:
@@ -735,11 +749,10 @@ def blender_render(
                 (bbox[0], bbox[1]),
                 bbox[2],
                 bbox[3],
-                linewidth=5,
+                linewidth=2,
                 edgecolor="lime",
                 facecolor="none",
             )
-            print((bbox[0], bbox[1] + bbox[3]))
             ax.add_patch(rect)
 
     if "bbox_est" in input_dict:
@@ -748,7 +761,7 @@ def blender_render(
                 (bbox[0], bbox[1]),
                 bbox[2],
                 bbox[3],
-                linewidth=3,
+                linewidth=2,
                 edgecolor="b",
                 facecolor="none",
             )
@@ -759,7 +772,7 @@ def blender_render(
         [0.0, W],
         [H - v0_batch_from_pitch_vfov, H - v0_batch_from_pitch_vfov],
         linestyle="-.",
-        linewidth=5,
+        linewidth=2,
         color="blue",
     )
 
@@ -767,235 +780,26 @@ def blender_render(
         plt.text(
             bbox[0],
             bbox[1],
-            "%.2fm" % (y_person),
-            fontsize=20,
+            "%.2f" % (y_person),
+            fontsize=10,
             bbox=dict(facecolor="white", alpha=0.5),
         )
 
-    plt.text(
-        30,
-        100,
-        r"$y_c$: %.2fm" % input_dict_show["yc_est"]
-        + "\n"
-        + r"$f_{mm}$: %.2fmm" % input_dict_show["f_est_mm"]
-        + "\n"
-        + r"$\theta$: %.2f$^\circ$" % input_dict_show["pitch_est_angle"],
-        fontsize=50,
-        color="white",
-        bbox=dict(facecolor="black", alpha=0.4),
-    )
-
-    ax.set_axis_off()
-    plt.autoscale(tight=True)
-
-    plt.savefig(save_path + "/%s.jpg" % (save_name), dpi=100, bbox_inches="tight")
-
-    if if_show:
-        plt.show()
-
-    plt.close(fig)
-
-
-def blender_render_reverse(
-    input_dict_show,
-    output_RCNN,
-    im_file,
-    save_path="./temp",
-    if_show=False,
-    save_name="",
-    tmp_code="iamgroot",
-    show_bbox=True,
-    show_render=False,
-    paper_zoom=False,
-):
-
-    tmp_code = "".join(
-        [random.choice(string.ascii_letters + string.digits) for n in range(32)],
-    )
-    os.makedirs(save_path, exist_ok=True)
-    currentdir = PATH
-    blender_path = "/snap/bin/blender"
-    scene_path = os.path.join(currentdir, os.pardir, "rendering/scene_chair_fix.blend")
-    script_path = os.path.join(
-        currentdir,
-        os.pardir,
-        "rendering/render_coco_rui_cylinder_all_fix_final.py",
-    )
-    render_file = os.path.join(
-        currentdir,
-        "rendering/render/render_all_%s.png" % tmp_code,
-    )
-    reproj_file = os.path.join(
-        currentdir,
-        "rendering/render/render_all_%s_reproj.png" % tmp_code,
-    )
-    from os import path
-
-    if path.exists(render_file):
-        os.system("rm " + render_file)
-
-    render_file = currentdir + "/rendering/render/render_all_%s.png" % tmp_code
-
-    if if_show == False:
-        plt.ioff()
-    insertion_points_xy_list = []
-    bboxes_filter = input_dict_show["bbox_gt"]
-    for bbox in bboxes_filter:
-        insertion_points_xy_list.append([bbox[0], bbox[1] + bbox[3]])
-
-    temp_folder = os.path.join(currentdir, "temp")
-    os.makedirs(temp_folder, exist_ok=True)
-    npy_path = os.path.join(temp_folder, "tmp_insert_pts_" + tmp_code)
-    np.save(npy_path, insertion_points_xy_list)
-    bbox_hs_list = [a.item() for a in input_dict_show["bbox_h"]]
-    npy_path = os.path.join(temp_folder, "tmp_bbox_hs_" + tmp_code)
-    np.save(npy_path, bbox_hs_list)
-
-    im_filepath = im_file[0]
-    im_ori = plt.imread(im_filepath)
-    H, W = im_ori.shape[:2]
-    insertion_points_x = -1
-    insertion_points_y = -1
-    ppitch = output_RCNN["pitch_batch_est"].cpu().numpy()[0]
-    ffpixels = output_RCNN["f_pixels_batch_est"].cpu().numpy()[0]
-    vvfov = output_RCNN["vfov_estim"].cpu().numpy()[0]
-    hhfov = np.arctan(W / 2.0 / ffpixels) * 2.0
-    h_cam = output_RCNN["yc_est_batch"].cpu().numpy()[0]
-
-    print("===fsdfs===blender, h_cam: %.2f" % h_cam)
-
-    fig = plt.figure(figsize=(15, 15), frameon=False)
-
-    def full_frame(width=None, height=None):
-        mpl.rcParams["savefig.pad_inches"] = 0
-        figsize = None if width is None else (width, height)
-        _ = plt.figure(figsize=figsize)
-        ax = plt.axes([0, 0, 1, 1], frameon=False)
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-        plt.autoscale(tight=True)
-
-    full_frame(15, 15)
-    _ = plt.imread(im_filepath)
-    plt.imshow(im_ori)
-    plt.axis("off")
+    if if_compact:
+        ax.set_axis_off()
+        plt.axis("off")
     plt.xlim([0, W])
     plt.ylim([H, 0])
-    ax = plt.gca()
-    ax.set_axis_off()
     plt.autoscale(tight=True)
+    image_dir = os.path.join(current_dir, save_path)
+    os.makedirs(image_dir, exist_ok=True)
     plt.savefig(
-        save_path + "/%s_noBbox.jpg" % (save_name),
+        os.path.join(image_dir, "%s" % (save_name)),
         dpi=100,
         bbox_inches="tight",
     )
-    plt.savefig(save_path + "/%s.jpg" % (save_name), dpi=100, bbox_inches="tight")
-    print("Original image saved to " + save_path + "/%s.jpg" % (save_name))
-
-    if show_bbox:
-        input_dict = input_dict_show
-        print(input_dict.keys(), "bbox_gt" in input_dict)
-        if "bbox_gt" in input_dict:
-            for bbox in input_dict["bbox_gt"]:
-                rect = Rectangle(
-                    (bbox[0], bbox[1]),
-                    bbox[2],
-                    bbox[3],
-                    linewidth=8,
-                    edgecolor="lime",
-                    facecolor="none",
-                )
-                print((bbox[0], bbox[1] + bbox[3]))
-                ax.add_patch(rect)
-
-        if "bbox_est" in input_dict:
-            for bbox in input_dict["bbox_est"]:
-                rect = Rectangle(
-                    (bbox[0], bbox[1]),
-                    bbox[2],
-                    bbox[3],
-                    linewidth=4,
-                    edgecolor="b",
-                    facecolor="none",
-                )
-                ax.add_patch(rect)
-
-        v0_batch_from_pitch_vfov = input_dict_show["v0_batch_from_pitch_vfov"]
-        plt.plot(
-            [0.0, W],
-            [H - v0_batch_from_pitch_vfov, H - v0_batch_from_pitch_vfov],
-            linestyle="-.",
-            linewidth=8,
-            color="blue",
-        )
-
-        for y_person, bbox in zip(input_dict["bbox_h"], input_dict["bbox_gt"]):
-            plt.text(
-                bbox[0],
-                bbox[1] - 10,
-                "%.2fm" % (y_person),
-                fontsize=40 if paper_zoom else 25,
-                bbox=dict(facecolor="white", alpha=0.8),
-            )
-
-        plt.text(
-            30,
-            200,
-            r"$y_c$: %.2fm" % input_dict_show["yc_est"]
-            + "\n"
-            + r"$f_{mm}$: %.2fmm" % input_dict_show["f_est_mm"]
-            + "\n"
-            + r"$\theta$: %.2f$^\circ$" % input_dict_show["pitch_est_angle"],
-            fontsize=50,
-            color="white",
-            bbox=dict(facecolor="black", alpha=0.4),
-        )
-
-    ax.set_axis_off()
-    plt.autoscale(tight=True)
-
-    plt.savefig(reproj_file, dpi=100, bbox_inches="tight")
-    print("Reprojection saved to " + reproj_file)
 
     if if_show:
         plt.show()
 
     plt.close(fig)
-
-    if not show_render:
-        render_file = reproj_file
-    else:
-        rendering_command = "{} {} --background --python {}".format(
-            blender_path,
-            scene_path,
-            script_path,
-        )
-        rendering_command_append = (
-            " -- -img_path %s -tmp_code %s -H %d -W %d -insertion_points_x %d -insertion_points_y %d -pitch %.6f -fov_h %.6f -fov_v %.6f -cam_h %.6f"
-            % (
-                reproj_file,
-                tmp_code,
-                H,
-                W,
-                insertion_points_x,
-                insertion_points_y,
-                ppitch,
-                hhfov,
-                vvfov,
-                h_cam,
-            )
-        )
-        rendering_command = rendering_command + rendering_command_append
-
-        os.system(rendering_command)
-
-        print("Loading rendered file: ", render_file)
-        im_render = plt.imread(render_file)
-        plt.figure(figsize=(10, 25))
-        plt.imshow(im_render)
-        plt.show()
-
-    os.system(
-        "cp {} {}".format(render_file, save_path + "/%s_reproj.jpg" % (save_name)),
-    )
-    print("Moded to : ", save_path + "/%s_reproj.jpg" % (save_name))

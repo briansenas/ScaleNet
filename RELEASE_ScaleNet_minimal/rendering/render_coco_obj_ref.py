@@ -318,7 +318,17 @@ if __name__ == "__main__":
     parser.add_argument("-cam_h", type=float, default=0.9, help="")
     parser.add_argument("-insertion_points_x", type=float, default=-1, help="")
     parser.add_argument("-insertion_points_y", type=float, default=-1, help="")
+    all_obj_names = ("Cone", "chair", "Cylinder")
+    parser.add_argument(
+        "-obj-name",
+        type=str,
+        choices=all_obj_names,
+        default="chair",
+        help="",
+    )
     opt = parser.parse_args()
+
+    object_name = opt.obj_name
 
     img_path = opt.img_path
     tmp_code = opt.tmp_code
@@ -349,9 +359,6 @@ if __name__ == "__main__":
 
     changeBackgroundImage(img_path, (imw, imh))
     setParametricSkyLighting(np.pi / 4, np.pi / 8, 3)
-
-    object_name = "chair"
-    all_obj_names = ["Cone", "chair", "Cylinder"]
 
     setCamera(-pitch, roll, hfov, vfov, imh, imw, cam_pos=(0, 0, h_cam))
     for obj in all_obj_names:
