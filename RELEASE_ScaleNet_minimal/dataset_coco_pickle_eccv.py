@@ -14,11 +14,11 @@ from scipy.io import loadmat
 from termcolor import colored
 
 # NOTE: What is this directory
-results_path_yannick = "data/coco_results/yannick_results_train2017_filtered"
+results_path_yannick = "data/COCO/coco_results/yannick_results_train2017_filtered"
 
 pickle_paths = {
-    "train-val": "data/coco_results/results_with_kps_20200208_morethan2_2-8/pickle",
-    "test": "data/coco_results/results_with_kps_20200225_val2017_test_detOnly_filtered_2-8_moreThan2/pickle",
+    "train-val": "data/COCO/coco_results/results_with_kps_20200208_morethan2_2-8/pickle",
+    "test": "data/COCO/coco_results/results_with_kps_20200225_val2017_test_detOnly_filtered_2-8_moreThan2/pickle",
 }
 
 pickle_paths["test"] = (
@@ -176,10 +176,8 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
 
             for train_pickle in self.pickle_files:
                 train_id_06 = os.path.basename(train_pickle)[6:12]
-                print(train_id_06)
                 train_file.write("%s\n" % (train_id_06))
             train_file.close()
-            print("Train split written to " + list_file)
 
         if opt.rank == 0:
             logger.info(
@@ -214,9 +212,6 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
                 == os.path.basename(self.pickle_files[0])[:12]
                 == os.path.basename(self.yannick_mat_files[0])[:12]
             )
-
-        if not self.train:
-            print([os.path.basename(img_file) for img_file in self.img_files[:12]])
 
     def __getitem__(self, k):
         im_ori_RGB = Image.open(self.img_files[k]).convert(
