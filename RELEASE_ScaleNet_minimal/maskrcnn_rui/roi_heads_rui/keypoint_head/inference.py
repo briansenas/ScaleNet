@@ -9,15 +9,9 @@ class KeypointPostProcessor(nn.Module):
 
     def forward(self, x, boxes):
         mask_prob = x
-        # print('++++x, boxes', x.shape, boxes)
         scores = None
         if self.keypointer:
             mask_prob, scores = self.keypointer(x, boxes)
-
-        # assert len(boxes) == 1, "Only non-batched inference supported for now"
-        # boxes_per_image = [box.bbox.size(0) for box in boxes]
-        # mask_prob = mask_prob.split(boxes_per_image, dim=0)
-        # scores = scores.split(boxes_per_image, dim=0)
 
         results = []
         for prob, box, score in zip(mask_prob, boxes, scores):

@@ -30,11 +30,8 @@ def reduce_loss_dict(loss_dict):
         for k in sorted(loss_dict.keys()):
             loss_names.append(k)
             all_losses.append(loss_dict[k])
-            print(k, loss_dict[k].shape, loss_dict[k])
         all_losses = torch.stack(all_losses, dim=0)
-        print('0-all_losses', all_losses)
         dist.reduce(all_losses, dst=0)
-        print('1-all_losses', all_losses)
         if dist.get_rank() == 0:
             # only main process gets accumulated, so only divide by
             # world_size in this case
@@ -73,8 +70,6 @@ def do_train(
     dataset_names = cfg.DATASETS.TEST
 
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
-        print(iteration)
-        
         if any(len(target) < 1 for target in targets):
             logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in targets]}" )
             continue
@@ -86,7 +81,6 @@ def do_train(
         targets = [target.to(device) for target in targets]
 
         loss_dict = model(images, targets)
-        print(loss_dict)
 
         losses = sum(loss for loss in loss_dict.values())
 
@@ -98,7 +92,6 @@ def do_train(
         optimizer.zero_grad()
         # Note: If mixed precision is not used, this ends up doing nothing
         # Otherwise apply loss scaling for mixed-precision recipe
-        # print('losses, scaled losses', losses, amp.scale_loss(losses, optimizer).item())
         with amp.scale_loss(losses, optimizer) as scaled_losses:
             scaled_losses.backward()
         optimizer.step()
@@ -132,7 +125,6 @@ def do_train(
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
         if data_loader_val is not None and test_period > 0 and iteration % test_period == 0:
-            print('VALLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL')
             meters_val = MetricLogger(delimiter="  ")
             synchronize()
             _ = inference(  # The result can be used for additional logging, e. g. for TensorBoard
@@ -150,12 +142,10 @@ def do_train(
             )
             synchronize()
             model.train()
-            print('VALLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL2')
 
             with torch.no_grad():
                 # Should be one image for each GPU:
-                for iteration_val, (images_val, targets_val, _) in enumerate(data_loader_val):
-                    print('iteration_val', iteration_val)
+                for _, (images_val, targets_val, _) in enumerate(data_loader_val):
                     images_val = images_val.to(device)
                     targets_val = [target.to(device) for target in targets_val]
                     loss_dict = model(images_val, targets_val)

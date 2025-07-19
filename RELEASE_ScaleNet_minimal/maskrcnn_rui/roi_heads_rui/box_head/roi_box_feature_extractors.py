@@ -72,17 +72,12 @@ class FPN2MLPFeatureExtractor(nn.Module):
         self.out_channels = representation_size
 
     def forward(self, x, proposals):
-        # print('[roi_box_feature_extractors] pooler input:', [x0.shape for x0 in x], proposals)
         x_pooled = self.pooler(x, proposals)
-        # print('[roi_box_feature_extractors] pooler pooled:', x_pooled.shape, len(x_pooled))
 
         x = x_pooled.view(x_pooled.size(0), -1)
-        # print('[roi_box_feature_extractors] pooler fc0:', x.shape)
 
         x = F.relu(self.fc6(x))
-        # print('[roi_box_feature_extractors] pooler fc1:', x.shape)
         x = F.relu(self.fc7(x))
-        # print('[roi_box_feature_extractors] pooler fc2:', x.shape)
 
         return x
 
@@ -174,20 +169,14 @@ class FPN2MLPFeatureExtractorRui(nn.Module):
         self.fc6 = make_fc(input_size, representation_size, use_gn)
         self.fc7 = make_fc(representation_size, representation_size, use_gn)
         self.out_channels = representation_size
-        print('=====', input_size, representation_size)
 
     def forward(self, x, proposals):
-        print('[roi_box_feature_extractors] pooler input:', [x0.shape for x0 in x], proposals)
         x_pooled = self.pooler(x, proposals)
-        print('[roi_box_feature_extractors] pooler pooled:', x_pooled.shape, len(x_pooled))
 
         x = x_pooled.view(x_pooled.size(0), -1)
-        print('[roi_box_feature_extractors] pooler fc0:', x.shape)
 
         x = F.relu(self.fc6(x))
-        print('[roi_box_feature_extractors] pooler fc1:', x.shape)
         x = F.relu(self.fc7(x))
-        print('[roi_box_feature_extractors] pooler fc2:', x.shape)
 
         return x
 
@@ -202,9 +191,4 @@ def make_classifier_feature_extractor(cfg, in_channels):
     func = registry.CLASSIFIER_FEATURE_EXTRACTORS[
         cfg.MODEL.CLASSIFIER_HEAD.FEATURE_EXTRACTOR
     ]
-    # print(cfg.MODEL.CLASSIFIER_HEAD.FEATURE_EXTRACTOR)
-    # print(registry.ROI_BOX_FEATURE_EXTRACTORS)
-    # func = registry.ROI_BOX_FEATURE_EXTRACTORS[
-    #     cfg.MODEL.CLASSIFIER_HEAD.FEATURE_EXTRACTOR
-    # ]
     return func(cfg, in_channels)

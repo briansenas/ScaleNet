@@ -54,8 +54,6 @@ class PostProcessor(nn.Module):
             results (list[BoxList]): one BoxList for each image, containing
                 the extra fields labels and scores
         """
-        print('+++++++++++sldjkhfkjshadiufh iaifugh si')
-
         class_logits, box_regression = x
         class_prob = F.softmax(class_logits, -1)
 
@@ -131,7 +129,6 @@ class PostProcessor(nn.Module):
                 boxlist_for_class, self.nms
             )
             num_labels = len(boxlist_for_class)
-            print(torch.full((num_labels,), j, dtype=torch.int64, device=device))
             boxlist_for_class.add_field(
                 "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
             )

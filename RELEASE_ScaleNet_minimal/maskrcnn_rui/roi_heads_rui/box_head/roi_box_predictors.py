@@ -61,11 +61,8 @@ class FastRCNNPredictorRuiMod(nn.Module):
         self.fc7_dim_reduce = make_fc(64, 16, use_gn)
 
     def forward(self, x):
-        # print('=====1', x.shape) # torch.Size([10, 104, 3, 3])
         x = self.avgpool(x)
-        # print('=====2', x.shape) # torch.Size([10, 104, 1, 1])
         x = x.view(x.size(0), -1)
-        # print('=====3', x.shape) # torch.Size([10, 104])
 
         cls_logit = self.cls_score(x)
         # bbox_pred = self.bbox_pred(x)
@@ -137,7 +134,6 @@ class FPNPredictor(nn.Module):
     def __init__(self, cfg, in_channels):
         super(FPNPredictor, self).__init__()
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES_bbox
-        # print(cfg)
         representation_size = in_channels
 
         self.cls_score = nn.Linear(representation_size, num_classes)

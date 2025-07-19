@@ -74,20 +74,14 @@ class ROIKeypointHead(torch.nn.Module):
         """
         # if self.training:
         with torch.no_grad():
-            # print('--- kps head before subsample', proposals, len(proposals), proposals[0].fields(), targets, targets[0].fields())
-            # print([target.get_field('img_files') for target in targets])
             if self.opt.est_bbox:
                 if if_notNMS_yet:
                     proposals = self.loss_evaluator.subsample(proposals, targets, if_sample=True)
             else:
-                # print(targets, targets[0].fields())
                 proposals_valid = [proposal[target_idxes_with_valid_kps] for proposal, target_idxes_with_valid_kps in zip(proposals, target_idxes_with_valid_kps_list)]
                 targets_valid = [target[target_idxes_with_valid_kps] for target, target_idxes_with_valid_kps in zip(targets, target_idxes_with_valid_kps_list)]
                 proposals_valid = self.loss_evaluator.prepare_targets_for_gt_box_input(proposals_valid, targets_valid)
 
-                # print('--- kps head before subsample2', proposals, proposals[0].fields(), targets, targets[0].fields())
-
-        # print('--- kps head after subsample', proposals, proposals[0].fields(), targets, targets[0].fields())
 
         x = self.feature_extractor(features, proposals)
         kp_logits = self.predictor(x)
@@ -95,36 +89,26 @@ class ROIKeypointHead(torch.nn.Module):
         output_kp = {}
         if self.if_roi_h_heads and (not if_notNMS_yet):
             # v1
-            # print('=====1', x.shape) # =====1 torch.Size([3, 512, 14, 14])
             x_conv = self.predictor_person_h_conv33(x)
-            # print('=====2 x_conv', x_conv.shape) # =====2 x_conv torch.Size([3, 256, 7, 7])
             person_h_logits = x_conv.view(x_conv.size(0), -1)
-            # print('=====3 x_conv', person_h_logits.shape) # =====3 x_conv torch.Size([3, 12544])
             person_h_logits = F.relu(self.predictor_person_h_fc6(person_h_logits))
             person_h_logits = self.predictor_person_h_fc7(person_h_logits)
 
             # # v2
             # person_h_logits = self.predictor_person_h_fc67(person_h_logits)
-            # print('=====3 person_h_logits', person_h_logits.shape)
             # output_kp.update({'person_h_logits': person_h_logits})
 
             # v3
-            # print('=====1', x.shape) # =====1 torch.Size([3, 512, 14, 14])
             # x_conv = self.predictor_person_h_conv33(x)
             # x_conv = self.predictor_person_h_conv33_2(x_conv)
-            # print('=====2 x_conv', x_conv.shape) # =====2 x_conv torch.Size([3, 64, 4, 4])
             # x_conv = self.avgpool(x_conv)
             # person_h_logits = x_conv.view(x_conv.size(0), -1)
-            # print('=====3 x_conv', person_h_logits.shape) # =====3 x_conv torch.Size([3, 12544])
             # person_h_logits = self.predictor_person_h_fc_justOne(person_h_logits)
-            # print('=====3 person_h_logits', person_h_logits.shape)
 
             # # v4
             # x_conv = self.avgpool(x)
             # person_h_logits = x_conv.view(x_conv.size(0), -1)
-            # print('=====3 x_conv', person_h_logits.shape) # =====3 x_conv torch.Size([3, 12544])
             # person_h_logits = self.predictor_person_h_fc_justOne(person_h_logits)
-            # print('=====3 person_h_logits', person_h_logits.shape)
 
 
             output_kp.update({'person_h_logits': person_h_logits})
@@ -134,11 +118,6 @@ class ROIKeypointHead(torch.nn.Module):
         #     result = self.post_processor(kp_logits, proposals)
         #     return x, result, {}
 
-        
-        # print('---', proposals[0].fields())
-        # print('--------', proposals[0].fields())
-        # print('---------', proposals_post[0].fields())
-
         proposals_post = None
         loss_kp = None
         if self.opt.est_bbox:
@@ -147,11 +126,6 @@ class ROIKeypointHead(torch.nn.Module):
             else:
                 loss_kp = self.loss_evaluator(proposals, kp_logits)
         else:
-            
-            # # ???
-            # proposals_post = self.post_processor(kp_logits, proposals)
-
-
             num_bbox_per_image = [proposal.bbox.shape[0] for proposal in proposals]
             num_bbox_valid_per_image = [proposal_valid.bbox.shape[0] for proposal_valid in proposals_valid]
             assert sum(num_bbox_per_image) == kp_logits.shape[0], '%d-%d'%(sum(num_bbox_per_image), kp_logits.shape[0])
@@ -160,8 +134,6 @@ class ROIKeypointHead(torch.nn.Module):
             kp_logits_valid = torch.cat(kp_logits_valid_list)
             assert sum(num_bbox_valid_per_image) == kp_logits_valid.shape[0], '%d-%d'%(sum(num_bbox_valid_per_image), kp_logits_valid.shape[0])
             loss_kp = self.loss_evaluator(proposals_valid, kp_logits_valid)
-            # print('>>>>>>>>>>', target_idxes_with_valid_kps_list, proposals_valid, kp_logits.shape, kp_logits_valid.shape)
-            # print('>>>>>>>>>>', [a.bbox.shape[0] for a in proposals_valid], kp_logits_valid.shape[0])
         
         return x, proposals, proposals_post, dict(loss_kp=loss_kp), output_kp
 

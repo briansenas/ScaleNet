@@ -66,8 +66,6 @@ class KeypointRCNNLossComputation(object):
     def match_targets_to_proposals(self, proposal, target):
         match_quality_matrix = boxlist_iou(target, proposal)
         matched_idxs = self.proposal_matcher(match_quality_matrix)
-        # print(proposal, target)
-        # print(matched_idxs, matched_idxs.shape)
         # Keypoint RCNN needs "labels" and "keypoints "fields for creating the targets
         target = target.copy_with_fields(["labels", "keypoints"])
         # get the targets corresponding GT for each proposal
@@ -75,7 +73,6 @@ class KeypointRCNNLossComputation(object):
         # GT in the image, and matched_idxs can be -2, which goes
         # out of bounds
         matched_targets = target[matched_idxs.clamp(min=0)]
-        # print(matched_targets)
         matched_targets.add_field("matched_idxs", matched_idxs)
         return matched_targets
 
@@ -90,20 +87,9 @@ class KeypointRCNNLossComputation(object):
 
             keypoints_per_image = matched_targets.get_field("keypoints")
 
-            # within_box = _within_box(
-            #     keypoints_per_image.keypoints, matched_targets.bbox
-            # )
             vis_kp = keypoints_per_image.keypoints[..., 2] > 0
-            # print(keypoints_per_image.keypoints.shape)
-            # print(keypoints_per_image.keypoints[..., 2])
-            # print(vis_kp.shape, vis_kp)
-            # is_visible = (within_box & vis_kp).sum(1) > 0
             is_visible = (vis_kp).sum(1) > 0
-            # print('oooooooooooooooooooo')
-
-
             labels_per_image[~is_visible] = -1
-            # print(labels_per_image.shape, labels_per_image)
 
             labels.append(labels_per_image)
             keypoints.append(keypoints_per_image)
@@ -140,19 +126,15 @@ class KeypointRCNNLossComputation(object):
             labels_per_image[neg_inds] = 0
 
             keypoints_per_image = matched_targets.get_field("keypoints")
-            # print('--keypoints_per_image1', keypoints_per_image.keypoints.shape, keypoints_per_image.keypoints)
             within_box = _within_box(
                 keypoints_per_image.keypoints, matched_targets.bbox
             )
             vis_kp = keypoints_per_image.keypoints[..., 2] > 0
-            # print(keypoints_per_image.keypoints.shape)
-            # print(keypoints_per_image.keypoints[..., 2])
             if if_debug:
                 print('+++++', vis_kp.shape, vis_kp)
             is_visible = (within_box & vis_kp).sum(1) > 0
 
             labels_per_image[~is_visible] = -1
-            # print(labels_per_image.shape, labels_per_image)
 
             labels.append(labels_per_image)
             keypoints.append(keypoints_per_image)
@@ -171,12 +153,6 @@ class KeypointRCNNLossComputation(object):
         """
         
         labels, keypoints = self.prepare_targets(proposals, targets)
-        # print('>>>>>>>')
-        # print(proposals)
-        # print(targets)
-        # print(labels, [label.shape for label in labels])
-        # print(keypoints)
-        # print('>>>>>>>')
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
 
         proposals = list(proposals)
@@ -206,26 +182,17 @@ class KeypointRCNNLossComputation(object):
         heatmaps = []
         valid = []
         for proposals_per_image in proposals:
-            # print('=====', proposals_per_image.fields())
             kp = proposals_per_image.get_field("keypoints")
-            # print('--keypoints_per_image2', kp.keypoints.shape)
             heatmaps_per_image, valid_per_image = project_keypoints_to_heatmap(
                 kp, proposals_per_image, self.discretization_size
             )
-            # print('---heatmaps_per_image', heatmaps_per_image.shape)
             heatmaps.append(heatmaps_per_image.view(-1))
             valid.append(valid_per_image.view(-1))
 
         keypoint_targets = cat(heatmaps, dim=0)
         valid = cat(valid, dim=0).to(dtype=torch.uint8)
-        # print('>> valid', valid)
         valid = torch.nonzero(valid, as_tuple=False).squeeze(1)
-        # print('>>>> valid', valid.shape)
-        # torch.mean (in binary_cross_entropy_with_logits) does'nt
-        # accept empty tensors, so handle it sepaartely
         if keypoint_targets.numel() == 0 or len(valid) == 0:
-            # print('kkkkkkkkkkeypoint_logits.sum() * 0')
-            # return keypoint_logits.sum() * 0
             return torch.zeros_like(keypoint_logits.sum(), device=keypoint_logits.sum().device)
 
         N, K, H, W = keypoint_logits.shape

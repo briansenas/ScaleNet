@@ -154,60 +154,33 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             self.keypoint.feature_extractor = self.box.feature_extractor
 
     def forward(self, opt, features, proposals, targets=None, target_idxes_with_valid_kps_list=[]):
-        # print('++++++targets', targets)
         losses = {}
         outputs = {}
-        # TODO rename x to roi_box_features, if it doesn't increase memory consumption
         if opt.est_bbox:
             x, detections, detections_nms, loss_box = self.box(features, proposals, targets=targets)
             losses.update(loss_box)
         else:
             detections = proposals
             detections_nms = proposals
-        # print('00 after bbox detections', detections[0], detections[0].fields(), detections[0].get_field('scores'), detections[0].get_field('labels'))
 
         if self.cfg.MODEL.MASK_ON:
-            # mask_features = features
-            # # optimization: during training, if we share the feature extractor between
-            # # the box and the mask heads, then we can reuse the features already computed
-            # if (
-            #     self.training
-            #     and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
-            # ):
-            #     mask_features = x
-            # # During training, self.box() will return the unaltered proposals as "detections"
-            # # this makes the API consistent during training and testing
-            # x, detections, loss_mask = self.mask(mask_features, detections, targets)
-            # losses.update(loss_mask)
             pass
 
         if self.cfg.MODEL.KEYPOINT_ON and opt.est_kps:
             keypoint_features = features
-            # optimization: during training, if we share the feature extractor between
-            # the box and the mask heads, then we can reuse the features already computed
             if (
                 self.training
                 and self.cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
             ):
                 keypoint_features = x
-            # During training, self.box() will return the unaltered proposals as "detections"
-            # this makes the API consistent during training and testing
-            # print('----detections', detections)[]
-            # print('----targets', targets)
             if opt.est_bbox:
-                # print('+++++detections, detections_nms')
-                # print(detections)
-                # print(detections_nms)
                 x, detections, _, loss_keypoint, _ = self.keypoint(keypoint_features, detections, targets, target_idxes_with_valid_kps_list=target_idxes_with_valid_kps_list, if_notNMS_yet=True)
                 _, _, detections_nms, _, output_kp = self.keypoint(keypoint_features, detections_nms, targets, target_idxes_with_valid_kps_list=target_idxes_with_valid_kps_list, if_notNMS_yet=False)
                 assert loss_keypoint is not None
                 assert detections_nms is not None
                 assert not output_kp
-                # losses.update(loss_keypoint)
-                # outputs.update(output_kp)
             else:
                 x, detections, detections_nms, loss_keypoint, output_kp = self.keypoint(keypoint_features, detections, targets, target_idxes_with_valid_kps_list=target_idxes_with_valid_kps_list) 
-                # print('01 after kps detections', detections[0], detections[0].fields(), detections[0].get_field('keypoints'))
             losses.update(loss_keypoint)
             outputs.update(output_kp)
 
