@@ -87,14 +87,9 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
         image_sizes_after_transform = [
             (image_after.shape[2], image_after.shape[1]) for image_after in image_batch
         ]
-        # if self.training:
-        #     for original_image, image_after, image_after_size in zip(inputCOCO_Image_maskrcnnTransform, image_batch, image_sizes_after_transform):
-        #         self.printer.print('[generalized_rcnn_rui-prepare_images] Image sizes:', original_image.shape, '-->', image_after.shape, image_after_size)
-
         # [Rui] PADDING
         # convert to an ImageList, ``padded`` so that it is divisible by cfg.DATALOADER.SIZE_DIVISIBILITY
         image_list = to_image_list(image_batch, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
-        # print(self.cfg.INPUT.MIN_SIZE_TRAIN, self.cfg.INPUT.MAX_SIZE_TRAIN, self.cfg.INPUT.MIN_SIZE_TEST, self.cfg.INPUT.MAX_SIZE_TEST)
         if self.training:
             self.printer.print(
                 "PADDED: image_list.tensors, image_list.image_sizes (before pad):",
@@ -125,20 +120,10 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
         """
 
         if_print = self.training
-        # if self.training and (list_of_bbox_list_cpu is None or list_of_oneLargeBbox_list_cpu is None):
-        #     raise ValueError("In training mode, targets should be passed")
-
-        # images = to_image_list(images)
         images, image_sizes_after_transform = self.prepare_images(
             original_image_batch_list,
         )
         features = self.backbone(images.tensors)
-        # DETACH!!!!!!!!!!!
-        # features = tuple(feat.detach() for feat in list(features))
-        # if if_print:
-        #     self.printer.print('[generalized_rcnn_rui] Feats:')
-        # for feat in features:
-        #     self.printer.print(feat.shape)
 
         return_dict = {"image_sizes_after_transform": image_sizes_after_transform}
 
@@ -163,9 +148,7 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
 
             roi_heads_output = self.roi_h_heads(features, list_of_bbox_list)
             class_logits = roi_heads_output["class_logits"]
-            # print('==roi_feats', roi_feats.shape, roi_feats.detach().cpu().numpy())
             class_logits_softmax = nn.functional.softmax(class_logits, dim=1)
-            # print(class_logits[0], torch.sum(class_logits[0]))
             bbox_lengths = [len(bbox_list) for bbox_list in list_of_bbox_list]
             class_logits_softmax_list = class_logits_softmax.split(bbox_lengths)
 

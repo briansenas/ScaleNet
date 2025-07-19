@@ -68,7 +68,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
         self.backbone = build_backbone(cfg)
         # self.rpn = build_rpn(cfg, self.backbone.out_channels)
 
-        print("modules_not_build", modules_not_build)
         self.if_classifier_heads = "classifier_heads" not in modules_not_build
         if self.if_classifier_heads:
             self.classifier_heads = build_classifier_heads(
@@ -80,13 +79,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
         # h and potentially person h heads, sharing featmap
         self.if_shared_kps_head = self.opt.est_kps
         #  and 'kps' in self.cfg.MODEL.NAME
-        print(
-            "if_shared_kps_head: ",
-            self.if_shared_kps_head,
-            self.opt.est_kps,
-            self.cfg.MODEL.NAME,
-        )
-
         self.if_roi_h_heads = "roi_h_heads" not in modules_not_build
         if self.if_roi_h_heads and not self.if_shared_kps_head:
             # independent h head without kps
@@ -115,14 +107,10 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
         image_sizes_after_transform = [
             (image_after.shape[2], image_after.shape[1]) for image_after in image_batch
         ]
-        # if self.training:
-        #     for original_image, image_after, image_after_size in zip(inputCOCO_Image_maskrcnnTransform, image_batch, image_sizes_after_transform):
-        #         self.printer.print('[generalized_rcnn_rui-prepare_images] Image sizes:', original_image.shape, '-->', image_after.shape, image_after_size)
 
         # [Rui] PADDING
         # convert to an ImageList, ``padded`` so that it is divisible by cfg.DATALOADER.SIZE_DIVISIBILITY
         image_list = to_image_list(image_batch, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
-        # print(self.cfg.INPUT.MIN_SIZE_TRAIN, self.cfg.INPUT.MAX_SIZE_TRAIN, self.cfg.INPUT.MIN_SIZE_TEST, self.cfg.INPUT.MAX_SIZE_TEST)
         if self.training:
             self.printer.print(
                 "PADDED: image_list.tensors, image_list.image_sizes (before pad):",
@@ -165,20 +153,10 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
             original_image_batch_list,
         )
         features = self.backbone(images.tensors)
-        # DETACH!!!!!!!!!!!
-        # features = tuple(feat.detach() for feat in list(features))
-        # if if_print:
-        #     self.printer.print('[generalized_rcnn_rui] Feats:')
-        # for feat in features:
-        #     self.printer.print(feat.shape)
-
         return_dict = {"image_sizes_after_transform": image_sizes_after_transform}
-
         if self.if_roi_bbox_heads and input_data in ["coco", "IMDB-23K"]:
             if self.opt.est_bbox:
-                # print('=====targets', targets)
                 proposals, proposal_losses = self.rpn(images, features, targets)
-                # print('=====proposals', proposals, proposals[0].fields(), proposals[0].get_field('objectness').shape)
                 target_idxes_with_valid_kps_list = []
             else:
                 proposals = [
@@ -194,12 +172,9 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                 target_idxes_with_valid_kps_list = []
                 for target in targets_dup:
                     keypoints_gt = target.get_field("keypoints").keypoints
-                    # print(keypoints_gt.shape, keypoints_gt)
                     kps_sum = torch.sum(torch.sum(keypoints_gt[:, :, :2], 1), 1)
                     kps_mask = (kps_sum != 0.0).cpu().numpy()
-                    # print('====kps_mask', kps_mask, np.where(kps_mask))
                     target_with_valid_kps = target[np.where(kps_mask)]
-                    # print(target_with_valid_kps)
                     target_idxes_with_valid_kps_list.append(np.where(kps_mask))
                     target_with_valid_kps_list.append(target_with_valid_kps)
                 targets = targets_dup
@@ -228,7 +203,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                 },
             )
 
-            # print('+++++++++ predictions', predictions, detector_losses)
 
             if self.training:
                 return_dict.update(detector_losses)
@@ -263,10 +237,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                 else:
                     roi_heads_output = self.roi_h_heads(features, list_of_bbox_list)
                     class_logits = roi_heads_output["class_logits"]
-                # print('||||||||||||||||', class_logits.shape, sum(bbox_lengths), bbox_lengths)
-                # print('==roi_feats', roi_feats.shape, roi_feats.detach().cpu().numpy())
                 class_logits_softmax = nn.functional.softmax(class_logits, dim=1)
-                # print(class_logits[0], torch.sum(class_logits[0]))
 
                 class_logits_softmax_list = class_logits_softmax.split(bbox_lengths)
 
@@ -443,14 +414,13 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
 
     def overlay_straighten_ratios(self, image, predictions):
         straighten_ratio_list = self.get_straighten_ratio_from_pred(predictions)
-        # print(straighten_ratio_list)
         labels = predictions.get_field("labels")
         boxes = predictions.bbox
 
         colors = self.compute_colors_for_labels(labels).tolist()
 
         template = "str_ratio {:.2f}"
-        for box, color, straighten_ratio in zip(boxes, colors, straighten_ratio_list):
+        for box, _, straighten_ratio in zip(boxes, colors, straighten_ratio_list):
             x, y = box[:2]
             s = template.format(straighten_ratio)
             cv2.putText(
@@ -571,7 +541,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                     kps_ankle,
                     kps_knee,
                 )
-                #     print(dist_pred_side / dist_straighten_side)
                 dist_pred += dist_pred_side * which_side_weight
                 dist_straighten += dist_straighten_side * which_side_weight
 
@@ -582,27 +551,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                 )
             else:
                 which_side_weight_array = [0.0, 0.0]
-
-            # dist_pred_legs = []
-            # dist_straighten_legs = []
-            # for which_side, which_side_vis in zip(['left', 'right'], which_side_vis_list):
-            #     kps_hip = kps[:2, dataset_keypoints.index(which_side+'_hip')]
-            #     kps_knee = kps[:2, dataset_keypoints.index(which_side+'_knee')]
-            #     kps_ankle = kps[:2, dataset_keypoints.index(which_side+'_ankle')]
-            #     dist_pred_side = np.abs(kps_hip[1] - kps_ankle[1])
-            #     dist_straighten_side = pts_dist(kps_hip, kps_knee) + pts_dist(kps_ankle, kps_knee)
-            # #     print(dist_pred_side / dist_straighten_side)
-            # #     dist_pred += dist_pred_side * which_side_weight
-            # #     dist_straighten += dist_straighten_side * which_side_weight
-            #     if which_side_vis:
-            #         dist_pred_legs.append(dist_pred_side)
-            #         dist_straighten_legs.append(dist_straighten_side)
-            #
-            # if dist_pred_legs:
-            #     legs_ratios = [dist_pred_leg / dist_straighten_leg for dist_pred_leg, dist_straighten_leg in  zip(dist_pred_legs, dist_straighten_legs)]
-            #     min_index = legs_ratios.index(min(legs_ratios))
-            #     dist_pred += dist_pred_legs[min_index]
-            #     dist_straighten += dist_straighten_legs[min_index]
 
             if dist_straighten == 0.0 or dist_pred == 0.0:
                 ratio = 1.0

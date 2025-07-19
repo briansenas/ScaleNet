@@ -40,11 +40,9 @@ def freeze_bn(module, bn_eval, bn_frozen):
                 # Notice the difference between the behaviors of
                 # BatchNorm.eval() and BatchNorm(track_running_stats=False)
                 m.eval()
-                # print('BN: %s in eval mode.' % module_name)
             if bn_frozen:
-                for param_name, params in m.named_parameters():
+                for _, params in m.named_parameters():
                     params.requires_grad = False
-                    # print('BN: %s is frozen.' % (module_name + '.' + param_name))
 
 
 def freeze_params(module, frozen_params):
@@ -60,7 +58,6 @@ def freeze_params(module, frozen_params):
             assert isinstance(pattern, str)
             if re.search(pattern, name):
                 params.requires_grad = False
-                # print('Params %s is frozen.' % name)
 
 
 def freeze_modules(module, frozen_modules, prefix=''):
@@ -78,8 +75,6 @@ def freeze_modules(module, frozen_modules, prefix=''):
             full_name = prefix + ('.' if prefix else '') + name
             if re.search(pattern, full_name):
                 m.eval()
-                # freeze_all_params(m)
-                # print('Module %s is frozen.' % full_name)
             else:
                 freeze_modules(m, frozen_modules, prefix=full_name)
 
@@ -116,7 +111,6 @@ def unfreeze_params(module, frozen_params):
             assert isinstance(pattern, str)
             if re.search(pattern, name):
                 params.requires_grad = True
-                # print('Params %s is unfrozen.' % name)
 
 
 def unfreeze_modules(module, frozen_modules, prefix=''):
@@ -134,8 +128,6 @@ def unfreeze_modules(module, frozen_modules, prefix=''):
             full_name = prefix + ('.' if prefix else '') + name
             if re.search(pattern, full_name):
                 m.train()
-                # unfreeze_all_params(m)
-                # print('Module %s is unfrozen.' % full_name)
             else:
                 unfreeze_modules(m, frozen_modules, prefix=full_name)
 
@@ -155,9 +147,8 @@ def unfreeze_by_patterns(module, patterns):
 
 def unfreeze_all_params(module):
     """Freeze all parameters in a module"""
-    for name, params in module.named_parameters():
+    for _, params in module.named_parameters():
         params.requires_grad = True
-        # print('Params %s is unfrozen.' % name)
 
 
 def check_frozen_modules(module, logger=None):

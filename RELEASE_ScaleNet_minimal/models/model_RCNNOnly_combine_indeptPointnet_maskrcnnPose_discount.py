@@ -40,10 +40,6 @@ class RCNNOnly_combine(nn.Module):
         self.num_layers = num_layers
 
         self.cls_names = ["horizon", "pitch", "roll", "vfov"]
-        # if self.opt.pointnet_camH:
-        #     self.cls_names = ['horizon', 'pitch', 'roll', 'vfov']
-        # else:
-        #     self.cls_names = ['horizon', 'pitch', 'roll', 'vfov', 'camH']
 
         torch.manual_seed(12344)
         self.RCNN = GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(
@@ -60,13 +56,8 @@ class RCNNOnly_combine(nn.Module):
 
         if self.opt.train_cameraCls:
             if self.opt.pointnet_camH:  # Only option for now
-                # import sys
-                # sys.path.insert(0, self.cfg.MODEL.POINTNET.PATH)
                 from models.model_part_pointnet_cls import CamHPointNet
 
-                # if self.opt.direct_camH:
-                #     out_channels_camH = 1
-                # else:
                 out_channels_camH = (
                     1
                     if self.opt.direct_camH
@@ -89,7 +80,6 @@ class RCNNOnly_combine(nn.Module):
                 else:
                     extra_input_dim = 1  # person_H, person_H_discount
 
-                # self.net_CamHPointNet = CamHPointNet(in_channels=6, out_channels=out_channels, with_bn=True, with_FC=False, with_transform=False)
                 self.net_PointNet = CamHPointNet(
                     in_channels=7 + self.roi_feat_dim + extra_input_dim,
                     out_channels=out_channels_camH,
@@ -120,9 +110,6 @@ class RCNNOnly_combine(nn.Module):
                                 CamHPersonHPointNet,
                             )
 
-                            # if self.opt.direct_camH:
-                            #     num_seg_classes = 1
-                            # else:
                             num_seg_classes_personH = (
                                 self.cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES_h
                             )  # personH logits
@@ -279,11 +266,6 @@ class RCNNOnly_combine(nn.Module):
 
         # Load bbox heads
         if self.opt.est_bbox:
-            # if 'SUN360RCNN' in self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD:
-            #     # _ = checkpointer.load(task_name=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD, only_load_kws=['roi_h_heads.box'])
-            #     _ = checkpointer.load(task_name=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD, only_load_kws=['roi_bbox_heads.box', 'rpn'])
-            # else:
-            #     # _ = checkpointer.load(f=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD, only_load_kws=['roi_h_heads.box'], skip_kws=['box.predictor'], replace_kws=['roi_h_heads.box'], replace_with_kws=['roi_heads.box'])
             _ = checkpointer.load(
                 f=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
                 only_load_kws=["roi_bbox_heads.box", "rpn"],
@@ -384,7 +366,6 @@ class RCNNOnly_combine(nn.Module):
             if self.opt.if_discount and self.opt.discount_from == "pred":
                 straighten_ratios_list_pred = []
                 for box_list_kps in output_RCNN["predictions"]:
-                    print("==", box_list_kps.fields())
                     straighten_ratios = self.RCNN.get_straighten_ratio_from_pred(
                         box_list_kps,
                         gt_input=False,
@@ -399,13 +380,6 @@ class RCNNOnly_combine(nn.Module):
                 else:
                     raise ValueError("opt.discount_from must be in ('GT', 'pred')!")
 
-                if input_dict_misc["is_training"]:
-                    print(
-                        "+++++where_to_cal_ratios",
-                        where_to_cal_ratios,
-                        self.opt.discount_from,
-                    )
-
         straighten_ratios_list = []
         for image_idx, box_list_kps in enumerate(list_of_box_list_kps_gt_clone):
             if self.opt.if_discount:
@@ -418,7 +392,6 @@ class RCNNOnly_combine(nn.Module):
                     torch.ones(box_list_kps.bbox.shape[0]).to(device).float()
                 )  # !!!!!!!
             straighten_ratios_list.append(straighten_ratios)
-        straighten_ratios_concat = torch.cat(straighten_ratios_list)
 
         preds_RCNN = {}
         if list_of_oneLargeBbox_list is not None and self.if_classifier_heads:
@@ -427,7 +400,6 @@ class RCNNOnly_combine(nn.Module):
                 input_dict_misc["bins"],
                 input_dict_misc["H_batch"],
                 reduce_method=reduce_method,
-                straighten_ratios_list=straighten_ratios_list,
             )
             preds_RCNN.update(
                 {
@@ -611,14 +583,8 @@ class RCNNOnly_combine(nn.Module):
                     },
                 )
 
-            # if self.opt.direct_camH:
-            #     print('--tanh(camH_cls_logits)', camH_cls_logits.shape, torch.tanh(camH_cls_logits).reshape([-1]))
-            #     print('------yc_est_batch', yc_est_batch.shape, yc_est_batch.reshape([-1]))
-
             if self.opt.pointnet_v0_refine:
                 preds_RCNN["v0_batch_est_0"] = preds_RCNN["v0_batch_est"].clone()
-
-            # vt_camEst_N_delta_paded, loss_vt, list_of_vt_camEst_N_delta = self.fit(input_dict, input_dict_misc, preds_RCNN, layer_num=layer_idx+1, if_detach=True)  #!!!!!!!!
 
             return_dict_fit, vt_camEst_N_delta_paded, list_of_vt_camEst_N_delta = (
                 self.fit_batch(
@@ -730,9 +696,6 @@ class RCNNOnly_combine(nn.Module):
                     preds_RCNN["yc_est_batch_np_list"].append(
                         yc_est_batch_delta.detach().cpu().numpy(),
                     )
-                    # if self.opt.direct_camH:
-                    #     print('=====tanh(camH_cls_logits_delta)', layer_idx, camH_cls_logits_delta.shape, torch.tanh(camH_cls_logits_delta).reshape([-1]))
-                    #     print('=========yc_est_batch_delta', layer_idx, yc_est_batch_delta.shape, yc_est_batch_delta.reshape([-1]))
 
                     if self.opt.pointnet_fmm_refine:
                         net_PointNet_cls_fmm_layer_output = (
@@ -769,11 +732,6 @@ class RCNNOnly_combine(nn.Module):
                             input_dict_misc["H_batch"].float(),
                             input_dict_misc["W_batch"].float(),
                         )  # [batchsize]
-
-                        # if self.opt.direct_fmm:
-                        #     print('-----tanh(fmm_est_batch_delta_percent)', layer_idx, fmm_est_batch_delta_percent.shape, torch.tanh(fmm_est_batch_delta_percent).reshape([-1]))
-                        # print('---------fmm_est_batch_delta', layer_idx, fmm_est_batch_delta.shape, fmm_est_batch_delta.reshape([-1]))
-                        # print('---------f_pixels_batch_est_mm', layer_idx, f_pixels_batch_est_mm.shape, f_pixels_batch_est_mm.reshape([-1]))
 
                         preds_RCNN["f_pixels_batch_est"] = (
                             preds_RCNN["f_pixels_batch_est"] + fpix_est_batch_delta
@@ -815,9 +773,6 @@ class RCNNOnly_combine(nn.Module):
                         preds_RCNN["v0_01_est_batch_np_list"].append(
                             v0_est_batch_delta.detach().cpu().numpy(),
                         )
-                        # if self.opt.direct_v0:
-                        #     print('-----tanh(v0_cls_logits_delta)', layer_idx, v0_cls_logits_delta.shape, torch.tanh(v0_cls_logits_delta).reshape([-1]))
-                        # print('---------v0_est_batch_delta', layer_idx, v0_est_batch_delta.shape, v0_est_batch_delta.reshape([-1]))
 
                     if self.opt.pointnet_personH_refine:
                         if not self.opt.pointnet_roi_feat_input_person3:
@@ -898,7 +853,7 @@ class RCNNOnly_combine(nn.Module):
                         preds_RCNN["person_hs_est_np_list_canonical"].append(
                             [
                                 (person_hs).detach().cpu().numpy()
-                                for person_hs, straighten_ratios in zip(
+                                for person_hs, _ in zip(
                                     person_h_delta_list,
                                     straighten_ratios_list,
                                 )
@@ -971,9 +926,6 @@ class RCNNOnly_combine(nn.Module):
 
                     output_RCNN.update(return_dict_fit)
 
-        if rank == 0 and tid % 20 == 0:
-            print(track_list)
-
         output_RCNN.update(preds_RCNN)
 
         return output_RCNN
@@ -1005,21 +957,20 @@ class RCNNOnly_combine(nn.Module):
             input_dict_show["bbox_geo"] = []
             input_dict_show["bbox_loss"] = []
 
-        # loss_func = input_dict_misc['loss_func']
         loss_func = torch.nn.L1Loss(reduction="none")
         for idx, bboxes_length in enumerate(input_dict["bboxes_length_batch_array"]):
             bboxes = input_dict_misc["bboxes_batch"][idx][:bboxes_length]  # [N, 4]
-            labels = input_dict["labels_list"]
+            # labels = input_dict["labels_list"]
             H = input_dict_misc["H_batch"][idx]
             vc = H / 2.0
             v0_est = preds_RCNN["v0_batch_est"][idx]
             pitch_est = preds_RCNN["pitch_batch_est"][idx]
             f_pixels_yannick_est = preds_RCNN["f_pixels_batch_est"][idx]
-            inv_f2 = 1.0 / (f_pixels_yannick_est * f_pixels_yannick_est)
+            # inv_f2 = 1.0 / (f_pixels_yannick_est * f_pixels_yannick_est)
             yc_est = preds_RCNN["yc_est_batch"][idx]
 
             H_np = input_dict_misc["H_batch"][idx].cpu().numpy()
-            W_np = input_dict_misc["W_batch"][idx].cpu().numpy()
+            # W_np = input_dict_misc["W_batch"][idx].cpu().numpy()
 
             if self.opt.not_rcnn:
                 h_human_s = (
@@ -1059,13 +1010,9 @@ class RCNNOnly_combine(nn.Module):
                 camH_fit = np.median(np.array(camH_fit_list))
                 camH_fit_batch.append(camH_fit)
 
-            vt_loss_sample_list = []
-            vt_loss_ori_sample_list = []
             if if_fit_derek:
                 vt_error_sample_fit_list = []
 
-            # vt_camEst_list = []
-            bbox_gt_sample = []
             bbox_est_sample = []
             if if_fit_derek:
                 bbox_fit_sample = []
@@ -1075,7 +1022,6 @@ class RCNNOnly_combine(nn.Module):
 
             vb_batch = H - (bboxes[:, 1] + bboxes[:, 3])  # [top H bottom 0]
             vt_gt_batch = H - bboxes[:, 1]  # [top H bottom 0]
-            # print(h_human_s.shape, pitch_est.shape, vb.shape)
             geo_model_input_dict = {
                 "yc_est": yc_est,
                 "vb": vb_batch,
@@ -1087,17 +1033,15 @@ class RCNNOnly_combine(nn.Module):
             }
             # geo_model_input_dict = {'yc_est': yc_est, 'vb': vb, 'y_person': y_person, 'v0': v0, 'vc': vc, 'f_pixels_yannick': f_pixels_yannick}
             if self.opt.accu_model:
-                vt_camEst_batch, z_batch, _ = model_utils.accu_model_batch(
+                vt_camEst_batch, _, _ = model_utils.accu_model_batch(
                     geo_model_input_dict,
                     if_debug=False,
                 )  # [top H bottom 0]
             else:
-                # vt_camEst = model_utils.approx_model(geo_model_input_dict)
+                #  vt_camEst = model_utils.approx_model(geo_model_input_dict)
                 pass
-            # print(vt_gt_batch.shape, vt_camEst_batch.shape)
 
             vt_loss_ori_batch = loss_func(vt_gt_batch, vt_camEst_batch) / bboxes[:, 3]
-            # print('====', loss_func(vt_gt_batch, vt_camEst_batch).shape, vt_gt_batch.shape, vt_camEst_batch.shape, bboxes[:, 3].shape, vt_loss_ori_batch.shape)
             vt_loss_ori_batch = torch.where(
                 torch.isnan(vt_loss_ori_batch),
                 torch.zeros_like(vt_loss_ori_batch),
@@ -1128,10 +1072,10 @@ class RCNNOnly_combine(nn.Module):
             if if_vis and if_fit_derek:
                 for bbox_idx, (
                     bbox,
-                    y_person_np,
+                    _,
                     vb,
                     vt_gt,
-                    vt_camEst_np,
+                    _,
                     vt_loss,
                 ) in enumerate(
                     zip(
@@ -1143,13 +1087,6 @@ class RCNNOnly_combine(nn.Module):
                         vt_loss_batch.to(input_dict_misc["cpu_device"]),
                     ),
                 ):
-                    # vt_loss_ori = loss_func(vt_gt, vt_camEst.reshape([])) / bbox[3]
-                    # vt_loss_ori = torch.where(torch.isnan(vt_loss_ori), torch.zeros_like(vt_loss_ori), vt_loss_ori)
-                    # vt_loss_ori_sample_list.append(vt_loss_ori.clone().detach().reshape([]))
-                    # vt_loss = torch.clamp(vt_loss_ori, 0., self.opt.cfg.MODEL.LOSS.VT_LOSS_CLAMP)
-                    # vt_loss_sample_list.append(vt_loss)
-                    # vt_loss_allBoxes_dict_cpu.update({'bbox_vt_loss_layer%d-tid%04d_rank%d_%02d-%02d'%(layer_num, input_dict_misc['tid'], input_dict_misc['rank'], idx, bbox_idx): vt_loss})
-
                     # Fitting 现场: getting vt
                     y_person_fit = 1.75
                     vt_camFit = geo_utils.fit_vt(
@@ -1177,7 +1114,6 @@ class RCNNOnly_combine(nn.Module):
                     )
 
                     bbox_np = bbox.cpu().numpy()
-                    #     # vt_camEst_np = vt_camEst.detach().cpu().numpy()
                     vt_camFit_np = vt_camFit.detach().cpu().numpy()
                     bbox_fit_sample.append(
                         [
@@ -1187,12 +1123,6 @@ class RCNNOnly_combine(nn.Module):
                             bbox_np[1] + bbox_np[3] - (H_np - vt_camFit_np),
                         ],
                     )
-                    #     bbox_gt_sample.append([bbox_np[0], bbox_np[1], bbox_np[2], bbox_np[3]]) # [x, y (top), w, h]
-                    #     bbox_est_sample.append([bbox_np[0], H_np - vt_camEst_np, bbox_np[2], bbox_np[1]+bbox_np[3]-(H_np - vt_camEst_np)])
-                    #
-                    #     bbox_h_sample.append(y_person_np)
-                    #     bbox_geo_sample.append(geo_model_input_dict)
-                    #     bbox_loss_sample.append(vt_loss.item())
 
             if if_vis:
                 bboxes_np = bboxes.detach().cpu().numpy()
@@ -1255,128 +1185,6 @@ class RCNNOnly_combine(nn.Module):
 
         return return_dict, vt_camEst_N_paded, list_of_vt_camEst_N
 
-    # def fit(self, input_dict, input_dict_misc, preds_RCNN, layer_num=1, if_detach=False, if_vis=False, if_fit_derek=False):
-    #     list_of_vt_camEst_N = []
-    #     vt_loss_allBoxes_dict_cpu = {}
-    #     vt_loss_sample_batch_list = []
-    #     if if_fit_derek:
-    #         camH_fit_batch = []
-    #         vt_error_fit_allBoxes_dict_cpu = {}
-    #
-    #     if if_vis:
-    #         input_dict_show = {}
-    #         input_dict_show['bbox_gt'] = []
-    #         input_dict_show['bbox_est'] = []
-    #         if if_fit_derek:
-    #             input_dict_show['bbox_fit'] = []
-    #         input_dict_show['bbox_h'] = []
-    #         input_dict_show['bbox_geo'] = []
-    #         input_dict_show['bbox_loss'] = []
-    #
-    #     loss_func = input_dict_misc['loss_func']
-    #     for idx, bboxes_length in enumerate(input_dict['bboxes_length_batch_array']):
-    #         bboxes = input_dict_misc['bboxes_batch'][idx][:bboxes_length] # [N, 4]
-    #         H = input_dict_misc['H_batch'][idx]
-    #         vc = H / 2.
-    #         v0_est = preds_RCNN['v0_batch_est'][idx]
-    #         pitch_est = preds_RCNN['pitch_batch_est'][idx]
-    #         f_pixels_yannick_est = preds_RCNN['f_pixels_batch_est'][idx]
-    #         inv_f2 = 1. / (f_pixels_yannick_est * f_pixels_yannick_est)
-    #         yc_est = preds_RCNN['yc_est_batch'][idx]
-    #
-    #         H_np = input_dict_misc['H_batch'][idx].cpu().numpy()
-    #         W_np = input_dict_misc['W_batch'][idx].cpu().numpy()
-    #
-    #         if self.opt.not_rcnn:
-    #             h_human_s = torch.from_numpy(np.asarray([1.75] * bboxes.shape[0], dtype=np.float32)).float().to(self.opt.device)\
-    #                     # + 0. * preds_RCNN['person_h_list'][idx]
-    #         else:
-    #             h_human_s = preds_RCNN['person_h_list'][idx]
-    #
-    #         if if_detach: # !!!!!!!
-    #             v0_est = v0_est.detach()
-    #             pitch_est = pitch_est.detach()
-    #             f_pixels_yannick_est = f_pixels_yannick_est.detach()
-    #             # yc_est = yc_est.detach()
-    #             # h_human_s = h_human_s.detach()
-    #
-    #         if if_fit_derek:
-    #             # Fitting 现场: getting camera heights
-    #             camH_fit_list = []
-    #             for bbox_idx, bbox in enumerate(bboxes):
-    #                 y_person_fit = 1.75
-    #                 camH_fit_bbox = geo_utils.fit_camH(bbox.cpu(), H.cpu(), v0_est.cpu(), vc.cpu(), f_pixels_yannick_est.cpu(), y_person_fit)
-    #                 camH_fit_list.append(camH_fit_bbox.detach().numpy())
-    #             camH_fit = np.median(np.array(camH_fit_list))
-    #             camH_fit_batch.append(camH_fit)
-    #
-    #         vt_loss_sample_list = []
-    #         vt_loss_ori_sample_list = []
-    #         if if_fit_derek:
-    #             vt_error_sample_fit_list = []
-    #
-    #         # vt_camEst_list = []
-    #         bbox_gt_sample = []
-    #         bbox_est_sample = []
-    #         bbox_fit_sample = []
-    #         bbox_h_sample = []
-    #         bbox_geo_sample = []
-    #         bbox_loss_sample = []
-    #
-    #         for bbox_idx, (bbox, y_person) in enumerate(zip(bboxes, h_human_s)):
-    #             vb = H - (bbox[1] + bbox[3]) # [top H bottom 0]
-    #             vt_gt = H - bbox[1] # [top H bottom 0]
-    #             geo_model_input_dict = {'yc_est': yc_est, 'vb': vb, 'y_person': y_person*torch.cos(pitch_est), 'v0': v0_est, 'vc': vc, 'f_pixels_yannick': f_pixels_yannick_est, 'pitch_est': pitch_est}
-    #             # geo_model_input_dict = {'yc_est': yc_est, 'vb': vb, 'y_person': y_person, 'v0': v0, 'vc': vc, 'f_pixels_yannick': f_pixels_yannick}
-    #             if self.opt.accu_model:
-    #                 vt_camEst, z, negative_z = model_utils.accu_model(geo_model_input_dict, if_debug=False)  # [top H bottom 0]
-    #             else:
-    #                 vt_camEst = model_utils.approx_model(geo_model_input_dict)
-    #
-    #             print(vt_camEst, vt_camEst.shape)
-    #             vt_loss_ori = loss_func(vt_gt, vt_camEst.reshape([])) / bbox[3]
-    #             vt_loss_ori = torch.where(torch.isnan(vt_loss_ori), torch.zeros_like(vt_loss_ori), vt_loss_ori)
-    #             vt_loss_ori_sample_list.append(vt_loss_ori.clone().detach().reshape([]))
-    #             vt_loss = torch.clamp(vt_loss_ori, 0., self.opt.cfg.MODEL.LOSS.VT_LOSS_CLAMP)
-    #             vt_loss_sample_list.append(vt_loss)
-    #             vt_loss_allBoxes_dict_cpu.update({'bbox_vt_loss_layer%d-tid%04d_rank%d_%02d-%02d'%(layer_num, input_dict_misc['tid'], input_dict_misc['rank'], idx, bbox_idx): vt_loss.to(input_dict_misc['cpu_device'])})
-    #
-    #             if if_fit_derek:
-    #                 # Fitting 现场: getting vt
-    #                 y_person_fit = 1.75
-    #                 vt_camFit = geo_utils.fit_vt(camH_fit, vb, v0_est, vc, y_person_fit, 1. / (f_pixels_yannick_est  * f_pixels_yannick_est))
-    #                 vt_error_fit = loss_func(vt_gt, vt_camFit) / bbox[3]
-    #                 vt_error_fit_allBoxes_dict_cpu.update({'bbox_vt_error_fit_tid%04d_rank%d_%02d-%02d'%(input_dict_misc['tid'], input_dict_misc['rank'], idx, bbox_idx): vt_error_fit.to(input_dict_misc['cpu_device'])})
-    #                 vt_error_sample_fit_list.append(vt_error_fit.detach().cpu().numpy().item())
-    #
-    #             if if_vis:
-    #                 bbox_np = bbox.cpu().numpy()
-    #                 vt_camEst_np = vt_camEst.detach().cpu().numpy()
-    #                 vt_camFit_np = vt_camFit.detach().cpu().numpy()
-    #                 bbox_gt_sample.append([bbox_np[0], bbox_np[1], bbox_np[2], bbox_np[3]]) # [x, y (top), w, h]
-    #                 bbox_est_sample.append([bbox_np[0], H_np - vt_camEst_np, bbox_np[2], bbox_np[1]+bbox_np[3]-(H_np - vt_camEst_np)])
-    #                 bbox_fit_sample.append([bbox_np[0], H_np - vt_camFit_np, bbox_np[2], bbox_np[1]+bbox_np[3]-(H_np - vt_camFit_np)])
-    #                 bbox_h_sample.append(y_person.cpu().detach().numpy())
-    #                 bbox_geo_sample.append(geo_model_input_dict)
-    #                 bbox_loss_sample.append(vt_loss.item())
-    #
-    #         vt_loss_sample = torch.mean(torch.stack(vt_loss_sample_list))
-    #         vt_loss_sample_batch_list.append(vt_loss_sample)
-    #
-    #         vt_camEst_N = torch.clamp(torch.stack(vt_loss_ori_sample_list).reshape((-1, 1)), -self.opt.cfg.MODEL.LOSS.VT_LOSS_CLAMP, self.opt.cfg.MODEL.LOSS.VT_LOSS_CLAMP)
-    #         list_of_vt_camEst_N.append(vt_camEst_N)
-    #
-    #     vt_loss_batch = torch.stack(vt_loss_sample_batch_list)
-    #     loss_vt = torch.mean(vt_loss_batch)
-    #
-    #     vt_camEst_N_paded = list_of_tensor_to_tensor_padded(list_of_vt_camEst_N, self.good_num) # [batchsize, N, 1] (vt_est-vt), normalized by H
-    #
-    #     return_dict = {'vt_loss_batch': vt_loss_batch, 'loss_vt': loss_vt, 'vt_loss_allBoxes_dict': vt_loss_allBoxes_dict_cpu}
-    #     if if_fit_derek:
-    #         return_dict.update({'camH_fit_batch': camH_fit_batch, 'vt_error_fit_allBoxes_dict': vt_error_fit_allBoxes_dict_cpu})
-    #
-    #     return return_dict, vt_camEst_N_paded, list_of_vt_camEst_N
-
     def yc_logits_to_est_yc(
         self,
         output_yc_batch,
@@ -1389,10 +1197,6 @@ class RCNNOnly_combine(nn.Module):
         if debug:
             print("[debug yc_logits_to_est_yc]: direct", direct)
         if direct:
-            # if self.opt.pointnet_camH_refine:
-            #     yc_est_batch = torch.tanh(output_yc_batch) + self.cfg.MODEL.HUMAN.MEAN
-            # else:
-            #     yc_est_batch = torch.tanh(output_yc_batch) * 1.70 + self.cfg.MODEL.HUMAN.MEAN
             midway = (low_high[0] + low_high[1]) / 2.0
             half_range = low_high[1] - midway
             yc_est_batch = (
@@ -1407,18 +1211,9 @@ class RCNNOnly_combine(nn.Module):
                     low_high[0],
                 )
         else:
-            # if self.opt.pointnet_camH_refine:
-            #     yc_est_batch = prob_to_est(output_yc_batch, bins, reduce_method)
-            # else:
             yc_est_batch = prob_to_est(output_yc_batch, bins, reduce_method)
         return yc_est_batch
 
-    # def yc_logits_to_est_yc_delta(self, output_yc_batch_delta, bins, reduce_method):
-    #     if self.opt.direct_camH:
-    #         yc_est_batch_delta = torch.tanh(output_yc_batch_delta) * 0.70
-    #     else:
-    #         yc_est_batch_delta = prob_to_est(output_yc_batch_delta, bins, reduce_method)
-    #     return yc_est_batch_delta
 
     def person_h_logits_to_person_h_list(
         self,
@@ -1434,8 +1229,6 @@ class RCNNOnly_combine(nn.Module):
             debug=False,
         )  # [N_bbox,]
         person_h_list = all_person_hs.split(bbox_lengths)
-        # if tid % opt.summary_every_iter == 0 and if_print:
-        #     print(white_blue('>>>> person_h_list:'), [person_h.detach().cpu().numpy() for person_h in person_h_list])
 
         return all_person_hs, person_h_list
 
@@ -1507,57 +1300,27 @@ class RCNNOnly_combine(nn.Module):
         bins,
         H_batch,
         reduce_method,
-        straighten_ratios_list=None,
     ):
         output_horizon = output_RCNN["output_horizon"]
         output_pitch = output_RCNN["output_pitch"]
-        # output_roll = output_RCNN['output_roll']
         output_vfov = output_RCNN["output_vfov"]
 
         predictions = {}
 
         if not self.opt.not_rcnn and self.opt.train_roi_h:
-            # # if opt.direct_h:
-            # #     all_person_hs = torch.tanh(output_RCNN['class_logits']) + cfg.MODEL.HUMAN.MEAN
-            # # else:
-            # all_person_hs = prob_to_est(output_RCNN['class_person_H_logits'], bins['human_bins_torch'], reduce_method)  # [N_bbox,]
-            # person_h_list = all_person_hs.split(output_RCNN['bbox_lengths'])
-            # # if tid % opt.summary_every_iter == 0 and if_print:
-            # #     print(white_blue('>>>> person_h_list:'), [person_h.detach().cpu().numpy() for person_h in person_h_list])
-            #
-            # prob_all_person_hs = model_utils.human_prior(all_person_hs, mean=self.cfg.MODEL.HUMAN.MEAN, std=self.cfg.MODEL.HUMAN.STD)
-            # prob_all_person_h_list = prob_all_person_hs.split(output_RCNN['bbox_lengths'])
-            # loss_all_person_h = - torch.mean(torch.stack([torch.mean(prob_all_person_h) for prob_all_person_h in prob_all_person_h_list]))
-            # loss_all_person_h = loss_all_person_h * self.cfg.SOLVER.PERSON_WEIGHT
-
             all_person_hs, person_h_list = self.person_h_logits_to_person_h_list(
                 output_RCNN["class_person_H_logits"],
                 bins["human_bins_torch"],
                 reduce_method,
                 output_RCNN["bbox_lengths"],
             )
-            # print([a.shape for a in straighten_ratios_list], all_person_hs.shape, [a.shape for a in person_h_list])
-            # print(torch.cat(straighten_ratios_list).shape)
 
             loss_all_person_h = self.person_h_list_loss(
                 all_person_hs,
                 output_RCNN["bbox_lengths"],
             )
 
-            # straighten_ratios_concat = torch.cat(straighten_ratios_list)
-            # all_person_hs_2 = all_person_hs * straighten_ratios_concat
-            # print('--', all_person_hs.shape, all_person_hs_2.shape)
-            # person_h_list_2 = [person_h * straighten_ratios for person_h, straighten_ratios in zip(person_h_list, straighten_ratios_list)]
-            # print('---', [a.shape for a in person_h_list], [a.shape for a in person_h_list_2])
-
-        # if self.opt.direct_h:
-        #     yc_est_batch = torch.tanh(output_yc_batch) + self.cfg.MODEL.HUMAN.MEAN
-        # else:
-        #     yc_est_batch = prob_to_est(output_yc_batch, bins['yc_bins_centers_torch'], reduce_method)
         if not self.opt.pointnet_camH:
-            # output_yc_batch = output_RCNN['output_camH']
-            # yc_est_batch = self.yc_logits_to_est(output_yc_batch, bins['yc_bins_lowHigh_list'][0], reduce_method)
-            # predictions.update({'yc_est_batch': yc_est_batch, 'output_yc_batch': output_yc_batch})
             pass
 
         # Yannick/s module
@@ -1567,10 +1330,7 @@ class RCNNOnly_combine(nn.Module):
             reduce_method,
         )
         f_estim = H_batch.float() / torch.tan(vfov_estim / 2) / 2
-        # f_pixels_yannick_batch_ori = f_pixels_yannick_batch.clone()
         f_pixels_yannick_batch_est = f_estim
-        # if tid % opt.summary_every_iter == 0 and if_print:
-        #     f_mm_array_yannick, f_mm_array_est = print_f_info(f_estim, f_pixels_yannick_batch, input_dict)
 
         # ([Yannick] 0 = top of the image, 1 = bottom of the image)
         horizon_estim = prob_to_est(
@@ -1581,10 +1341,6 @@ class RCNNOnly_combine(nn.Module):
         v0_batch_predict = (
             H_batch.float() - horizon_estim * H_batch.float()
         )  # (H = top of the image, 0 = bottom of the image)
-        # v0_batch_ori = v0_batch.clone()
-        # if tid % opt.summary_every_iter == 0 and if_print:
-        #     print_v0_info(v0_batch_est, v0_batch, output_pitch, H_batch)
-        # v0_batch = v0_batch_est
 
         # ([Yannick] negative of our def! horizon above center: positive)
         pitch_estim_yannick = prob_to_est(
@@ -1601,7 +1357,6 @@ class RCNNOnly_combine(nn.Module):
             H_batch.float() - v0_batch_from_pitch_vfov_01 * H_batch.float()
         )  # (H = top of the image, 0 = bottom of the image)
 
-        # v0_batch_est = v0_batch_predict
         v0_batch_est = v0_batch_from_pitch_vfov
 
         predictions.update(
@@ -1632,12 +1387,12 @@ class RCNNOnly_combine(nn.Module):
         return predictions
 
     def turn_off_all_params(self):
-        for name, param in self.named_parameters():
+        for _, param in self.named_parameters():
             param.requires_grad = False
         self.logger.info(colored("only_enable_camH_bboxPredictor", "white", "on_red"))
 
     def turn_on_all_params(self):
-        for name, param in self.named_parameters():
+        for _, param in self.named_parameters():
             param.requires_grad = True
         self.logger.info(colored("turned on all params", "white", "on_red"))
 
