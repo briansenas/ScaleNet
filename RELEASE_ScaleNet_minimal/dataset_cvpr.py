@@ -163,7 +163,13 @@ def bins2vfov(bins):
 
 
 class SUN360Horizon:
-    def __init__(self, transforms=None, train=True, logger=None):
+    def __init__(
+        self,
+        transforms=None,
+        train=True,
+        logger=None,
+        json_name: str = "config/SUN360_mini_crops_dataset_cvpr_myDistNarrowerLarge1105.json",
+    ):
 
         self.transforms = transforms
         if logger is None:
@@ -173,13 +179,12 @@ class SUN360Horizon:
         import time
 
         ts = time.time()
-        json_name = DS_ROOT.split("/")[-1]
         try:
-            with open("%s.json" % json_name) as fhdl:
+            with open(json_name) as fhdl:
                 self.data = json.load(fhdl)
         except FileNotFoundError:
             self.data = glob(os.path.join(DS_ROOT, "**/*.jpg"), recursive=True)
-            with open("%s.json" % json_name, "w") as fhdl:
+            with open(json_name, "w") as fhdl:
                 json.dump(self.data, fhdl)
         self.logger.info(
             colored(
