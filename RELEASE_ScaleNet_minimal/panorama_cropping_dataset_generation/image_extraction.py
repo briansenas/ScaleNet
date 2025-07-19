@@ -1,7 +1,6 @@
 __version__ = "1"
 
 import numpy as np
-import time
 import os
 import os.path
 import sys
@@ -90,8 +89,6 @@ def extractImage(
     if len(viewing_angles) > 2:
         roll = viewing_angles[2]
 
-    t = time.time()
-
     if type(envmapPath).__module__ == np.__name__:
         envmap = envmapPath
     else:
@@ -106,12 +103,8 @@ def extractImage(
     fovY = np.tan(fovRad / 2.0)
     fovX = fovY / ratiohw
 
-    producedInputs, producedOutputs, anglesDesc = [], [], []
-    totalAvgInputs, totalStdInputs = np.zeros((3,)), np.zeros((3,))
-
     if mode in ["mask", "maskbool"]:
         # We produce a latlong image, masked everywhere except in one specific zone
-        t1 = time.time()
         azimPixCoords, elevPixCoords = np.meshgrid(
             np.arange(-envmap.shape[1] // 2, envmap.shape[1] // 2),
             np.arange(-envmap.shape[0] // 2, envmap.shape[0] // 2),
@@ -229,8 +222,8 @@ def demo():
         img = imread(img_path).astype(np.float32)
         phi = 0
         lambda_ = 0
-        for a in range(1):  # phi in np.arange(-np.pi/2, np.pi/2 + np.pi/6, np.pi/2):
-            for b in range(1):  # lambda_ in np.arange(-np.pi, np.pi, np.pi/2):
+        for _ in range(1):  # phi in np.arange(-np.pi/2, np.pi/2 + np.pi/6, np.pi/2):
+            for _ in range(1):  # lambda_ in np.arange(-np.pi, np.pi, np.pi/2):
                 for roll in np.arange(-np.pi, np.pi, np.pi / 4):
                     out = extractImage(img, [phi, lambda_, roll], 320)
                     mask = extractImage(img, [phi, lambda_, roll], 320, mode="maskbool")
