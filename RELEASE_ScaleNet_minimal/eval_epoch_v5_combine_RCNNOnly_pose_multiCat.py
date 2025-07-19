@@ -3,6 +3,7 @@ from statistics import mean
 
 import numpy as np
 import skimage.io as io
+import torch
 import torch.distributed as dist
 import utils.vis_utils as vis_utils
 from maskrcnn_rui.engine.inference import _accumulate_predictions_from_multiple_gpus
@@ -56,7 +57,6 @@ def eval_epoch_combine_RCNNOnly(
     vt_error_fit_allBoxes_dict = {}
     im_filename_list = []
 
-    test_list = []
     loss_list = []
 
     camH_est_list = []
@@ -77,6 +77,7 @@ def eval_epoch_combine_RCNNOnly(
         with tqdm(total=len(eval_loader)) as t:
             t.set_description(f"Ep.{epoch} Eval")
             for i, (
+                _,
                 inputCOCO_Image_maskrcnnTransform_list,
                 W_batch_array,
                 H_batch_array,
@@ -89,7 +90,6 @@ def eval_epoch_combine_RCNNOnly(
                 im_file,
                 target_maskrcnnTransform_list,
                 labels_list,
-                _,
             ) in enumerate(tqdm(eval_loader)):
 
                 if if_debug:
@@ -117,7 +117,6 @@ def eval_epoch_combine_RCNNOnly(
                     device,
                     opt,
                     is_training=False,
-                    epoch=-1,
                     tid=i,
                     loss_func=loss_func_l1,
                     rank=rank,
@@ -126,7 +125,6 @@ def eval_epoch_combine_RCNNOnly(
                 )
 
                 if if_loss:
-                    # print('---eval epoch: loss_dict', loss_dict.keys())
                     loss_dict_reduced = reduce_loss_dict(
                         loss_dict,
                         mark=i,
@@ -141,7 +139,6 @@ def eval_epoch_combine_RCNNOnly(
                                 mark=i,
                                 logger=logger,
                             )  # **average** over multi GPUs
-                            # print('++++++++loss_vt_layers_dict_reduced', loss_vt_layers_dict_reduced)
                             eval_loss_vt_layers_dict_list.append(
                                 loss_vt_layers_dict_reduced,
                             )

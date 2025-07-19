@@ -5,8 +5,6 @@ import utils.model_utils as model_utils
 from utils import utils_coco
 from utils.train_utils import f_pixels_to_mm
 
-cpu_device = torch.device("cpu")
-
 
 def train_batch_combine(
     input_dict,
@@ -14,19 +12,14 @@ def train_batch_combine(
     device,
     opt,
     is_training,
-    epoch=-1,
     tid=-1,
     loss_func=None,
     rank=0,
-    logger=None,
-    printer=None,
     if_SUN360=True,
     if_vis=False,
-    if_debug=False,
 ):
     # if_vis = True
     if_print = is_training
-    cfg = opt.cfg
     bins = input_dict["bins"]
 
     # ========= Rui's inputs
@@ -35,11 +28,11 @@ def train_batch_combine(
     ]
     (
         bboxes_batch,
-        v0_batch_offline,
+        _,
         f_pixels_yannick_batch_offline,
         W_batch,
         H_batch,
-        yc_batch_offline,
+        _,
     ) = (
         torch.from_numpy(input_dict["bboxes_batch_array"]).float().to(device),
         input_dict["v0_batch"].to(device),
@@ -49,15 +42,12 @@ def train_batch_combine(
         input_dict["yc_batch"].to(device),
     )
 
-    # if not opt.not_rcnn:
     list_of_bbox_list_cpu = model_utils.bboxArray_to_bboxList(
         bboxes_batch,
         input_dict["bboxes_length_batch_array"],
         input_dict["W_batch_array"],
         input_dict["H_batch_array"],
     )
-    # else:
-    #     list_of_bbox_list_cpu = []
 
     list_of_oneLargeBbox_list_cpu = model_utils.oneLargeBboxList(
         input_dict["W_batch_array"],
@@ -81,7 +71,7 @@ def train_batch_combine(
         "W_batch": W_batch,
         "bboxes_batch": bboxes_batch,
         "loss_func": loss_func,
-        "cpu_device": cpu_device,
+        "cpu_device": torch.device("cpu"),
         "device": device,
         "tid": tid,
         "rank": rank,
@@ -124,7 +114,7 @@ def train_batch_combine(
         output_vfov = output_RCNN["output_vfov"]
 
         f_pixels_yannick_batch_ori = f_pixels_yannick_batch_offline.clone()
-        v0_batch_ori = v0_batch_offline.clone()
+        # v0_batch_ori = v0_batch_offline.clone()
 
         v0_batch_est = output_RCNN["v0_batch_est"]
         v0_batch_predict = output_RCNN["v0_batch_predict"]
@@ -142,7 +132,7 @@ def train_batch_combine(
             f_mm_array_est = f_pixels_to_mm(f_pixels_yannick_batch_est, input_dict)
 
         if opt.pointnet_camH:
-            output_yc_batch = output_RCNN["output_yc_batch"]
+            # output_yc_batch = output_RCNN["output_yc_batch"]
             yc_est_batch = output_RCNN["yc_est_batch"]
             # yc_est_batch_list = output_RCNN['yc_est_batch_list']
             return_dict.update(
@@ -153,7 +143,7 @@ def train_batch_combine(
             )
 
         if opt.train_roi_h and not opt.not_rcnn:
-            person_h_list = output_RCNN["person_h_list"]
+            # person_h_list = output_RCNN["person_h_list"]
             all_person_hs = output_RCNN["all_person_hs"]
 
         if opt.fit_derek:
@@ -178,12 +168,7 @@ def train_batch_combine(
             assert (
                 len(loss_vt_list) != 0 or opt.loss_last_layer
             ), "len loss_vt_list cannot be 0 when not loss_last_layer!"
-            # else:
-            #     loss_vt_list = []
-            # loss_vt_list.append(loss_vt)
             return_dict.update({"loss_vt_list": loss_vt_list})
-            if tid % 20 == 0:
-                print("loss_vt_list length: ", len(loss_vt_list))
 
             if not opt.loss_last_layer:
                 # mean of layers; for optimization and scheduler
@@ -208,14 +193,8 @@ def train_batch_combine(
                 return_dict.update(
                     {"all_person_hs_layers": output_RCNN["all_person_hs_layers"]},
                 )
-                # loss_dict.update({'loss_person': loss_all_person_h})
                 loss_all_person_h_list = output_RCNN["loss_all_person_h_list"]
                 return_dict.update({"loss_all_person_h_list": loss_all_person_h_list})
-                if tid % 20 == 0:
-                    print(
-                        "loss_all_person_h_list length: ",
-                        len(loss_all_person_h_list),
-                    )
                 if not opt.loss_last_layer:
                     # mean of layers; for optimization and scheduler
                     loss_dict.update(
