@@ -138,30 +138,27 @@ def accu_model(input_dict, if_debug=False):
     # theta_yannick =  2 * torch.atan((vc - v0) / (2. * f_pixels_yannick))
     if "pitch_est" in input_dict:
         theta_yannick = input_dict["pitch_est"]
-        if if_debug:
-            print("Using pitch!", theta_yannick)
     else:
         theta_yannick = torch.atan((vc - v0) / f_pixels_yannick)
-    if if_debug:
-        print("---theta_yannick", theta_yannick)
     z = -(f_pixels_yannick * yc_est) / (
         f_pixels_yannick * torch.sin(theta_yannick)
         - (vc - vb) * torch.cos(theta_yannick)
         + 1e-10
     )
-    print("---z", z)
-    print("---z1", -(f_pixels_yannick * yc_est))
-    print(
-        "---z2",
-        (
-            f_pixels_yannick * torch.sin(theta_yannick)
-            - (vc - vb) * torch.cos(theta_yannick)
-            + 1e-10
-        ),
-    )
 
     if if_debug:
+        print("Using pitch!", theta_yannick)
+        print("---theta_yannick", theta_yannick)
         print("---z", z)
+        print("---z1", -(f_pixels_yannick * yc_est))
+        print(
+            "---z2",
+            (
+                f_pixels_yannick * torch.sin(theta_yannick)
+                - (vc - vb) * torch.cos(theta_yannick)
+                + 1e-10
+            ),
+        )
     if z.detach().cpu().numpy() < 0:
         if if_debug:
             print(
@@ -306,31 +303,10 @@ def get_pitch_est_bad(
 def get_pitch_est(
     pitch_bins_low_device_batch,
     pitch_bins_mid_device_batch,
-    pitch_bins_high_device_batch,
     output_pitch,
-    batchsize,
-    H_batch,
-    vfov_estim,
-    f_estim,
 ):
-    half_fov_batch = (vfov_estim / 2.0).unsqueeze(-1)
-    pitch_bins_low_device_batch_v0 = 0.5 - torch.tan(
-        -pitch_bins_low_device_batch,
-    ) * f_estim.unsqueeze(-1) / H_batch.unsqueeze(-1)
-    pitch_bins_high_device_batch_v0 = 0.5 + torch.tan(
-        pitch_bins_high_device_batch,
-    ) * f_estim.unsqueeze(-1) / H_batch.unsqueeze(-1)
-    pitch_bins_mid_device_batch_v0 = pitch_bins_mid_device_batch
-
-    # expectation_pitch_bins_low_device_batch_v0 = pitch_bins_low_device_batch_v0 * output_pitch[:, :pitch_bins_low_device_batch.shape[0]]
     low_dims = pitch_bins_low_device_batch.shape[1]  # 31
     mid_dims = pitch_bins_mid_device_batch.shape[1]
-    high_dims = pitch_bins_high_device_batch.shape[1]  # 32
-    # print(output_pitch[:, :low_dims].shape, output_pitch[:, -high_dims:].shape, output_pitch[:, low_dims:(low_dims+mid_dims)].shape)
-    expectation_pitch_bins_low_device_batch_v0 = (
-        torch.exp(nn.functional.log_softmax(output_pitch[:, :low_dims], dim=1))
-        * pitch_bins_low_device_batch_v0
-    ).sum(dim=1)
     expectation_pitch_bins_mid_device_batch_v0 = (
         torch.exp(
             nn.functional.log_softmax(
@@ -340,11 +316,6 @@ def get_pitch_est(
         )
         * pitch_bins_mid_device_batch
     ).sum(dim=1)
-    expectation_pitch_bins_high_device_batch_v0 = (
-        torch.exp(nn.functional.log_softmax(output_pitch[:, -high_dims:], dim=1))
-        * pitch_bins_high_device_batch_v0
-    ).sum(dim=1)
-
     expectation_batch_v0 = expectation_pitch_bins_mid_device_batch_v0
     return expectation_batch_v0
 

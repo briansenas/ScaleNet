@@ -79,7 +79,6 @@ def make_data_loader(
     is_train=True,
     is_distributed=False,
     start_iter=0,
-    is_for_period=False,
     logger=None,
     override_shuffle=None,
     collate_fn=None,

@@ -22,11 +22,10 @@ def check_eval_COCO(
     bins,
     logger,
     scheduler,
-    epochs_evaled,
+    epochs_evalued,
 ):
     is_better = False
-    # if epoch != 0 and epoch != epoch_start and not opt.not_val and epoch not in epochs_evaled:
-    if not opt.not_val and epoch not in epochs_evaled:
+    if not opt.not_val and epoch not in epochs_evalued:
         if rank == 0:
             logger.info(green("Evaluating on COCO..... epoch %d" % epoch))
         model.eval()
@@ -74,7 +73,7 @@ def check_eval_COCO(
                         tid,
                     )
                     writer.add_scalar("training/scheduler-epoch", epoch, tid)
-        epochs_evaled.append(epoch)
+        epochs_evalued.append(epoch)
         model.train()
     return is_better
 

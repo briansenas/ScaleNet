@@ -405,7 +405,6 @@ def show_box_kps(
     figzoom=1.0,
     if_pause=True,
     if_return=False,
-    if_not_detail=False,
     idx_sample=0,
     select_top=True,
     predictions_override=None,
@@ -423,7 +422,7 @@ def show_box_kps(
     else:
         predictions = predictions_override
     if opt.distributed:
-        prediction_list, prediction_list_ori = model.module.RCNN.post_process(
+        _, prediction_list_ori = model.module.RCNN.post_process(
             predictions,
             image_sizes_ori,
         )
@@ -433,7 +432,7 @@ def show_box_kps(
             image_batch_list_ori,
         )
     else:
-        prediction_list, prediction_list_ori = model.RCNN.post_process(
+        _, prediction_list_ori = model.RCNN.post_process(
             predictions,
             image_sizes_ori,
         )
@@ -445,7 +444,7 @@ def show_box_kps(
         )
     input_dict_show["result_list_pose"] = result_list
     target_list = [input_dict_show["target_maskrcnnTransform_list"]]
-    for idx, (target, result) in enumerate(zip(target_list, result_list)):
+    for _, (_, result) in enumerate(zip(target_list, result_list)):
         # bboxes_gt = target.get_field('boxlist_ori').convert("xywh").bbox.numpy()
         if if_show == False:
             plt.ioff()
@@ -454,28 +453,15 @@ def show_box_kps(
         plt.title(
             "[%d-%s]" % (input_dict_show["tid"], input_dict_show["im_filename"][-6:]),
         )
-        # ax = plt.gca()
-        # for bbox_gt in bboxes_gt:
-        #     # print(bbox_gt)
-        #     rect = Rectangle((bbox_gt[0], bbox_gt[1]), bbox_gt[2], bbox_gt[3], linewidth=2, edgecolor='lime', facecolor='none')
-        #     ax.add_patch(rect)
-        # plt.title('%d'%idx)
-        # plt.show()
         if if_show and not if_return:
             plt.show()
-            # print('plt.show()')
             if if_pause:
-                if_delete = input(colored("Pause", "white", "on_blue"))
+                _ = input(colored("Pause", "white", "on_blue"))
         if if_save:
             vis_path = os.path.join(save_path, save_name + ".jpg")
             fig.savefig(vis_path)
             if idx_sample == 0:
                 print("Vis saved to " + vis_path)
-            # npy_path = os.path.join(save_path, 'zzNpy-' + save_name+'.npy')
-            # np.save(npy_path, input_dict_show)
-        # if if_return:
-        #     return fig
-        # else:
         plt.close(fig)
     return result_list, top_prediction_list
 
