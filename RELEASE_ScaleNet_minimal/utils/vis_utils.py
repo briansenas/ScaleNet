@@ -2,8 +2,6 @@ import logging
 import ntpath
 import os
 import pathlib
-import random
-import string
 from pathlib import Path
 
 import matplotlib as mpl
@@ -15,7 +13,6 @@ from dataset_cvpr import bins2roll
 from dataset_cvpr import bins2vfov
 from imageio import imread
 from imageio import imsave
-from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from panorama_cropping_dataset_generation.debugging import showHorizonLine
 from panorama_cropping_dataset_generation.debugging import showHorizonLineFromHorizon
