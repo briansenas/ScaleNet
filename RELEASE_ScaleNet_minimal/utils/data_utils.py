@@ -43,22 +43,12 @@ eval_trnfs_yannick = transforms.Compose(
 
 
 def make_batch_data_sampler(
-    dataset,
     sampler,
     images_per_batch,
     num_iters=None,
     start_iter=0,
     drop_last=True,
 ):
-    # if aspect_grouping:
-    #     if not isinstance(aspect_grouping, (list, tuple)):
-    #         aspect_grouping = [aspect_grouping]
-    #     aspect_ratios = _compute_aspect_ratios(dataset)
-    #     group_ids = _quantize(aspect_ratios, aspect_grouping)
-    #     batch_sampler = samplers.GroupedBatchSampler(
-    #         sampler, group_ids, images_per_batch, drop_uneven=False
-    #     )
-    # else:
     batch_sampler = torch.utils.data.sampler.BatchSampler(
         sampler,
         images_per_batch,
@@ -124,15 +114,12 @@ def make_data_loader(
         shuffle = override_shuffle
     sampler = make_data_sampler(dataset, shuffle, is_distributed)
     batch_sampler = make_batch_data_sampler(
-        dataset,
         sampler,
         images_per_gpu,
         num_iters,
         start_iter,
         drop_last=drop_last,
     )
-    # collator = BBoxAugCollator() if not is_train and cfg.TEST.BBOX_AUG.ENABLED else \
-    #     BatchCollator(cfg.DATALOADER.SIZE_DIVISIBILITY)
     num_workers = cfg.DATALOADER.NUM_WORKERS
     data_loader = torch.utils.data.DataLoader(
         dataset,
@@ -141,7 +128,10 @@ def make_data_loader(
         collate_fn=collate_fn,
     )
     logger.info(
-        "++++++[train_utils] len(dataset) %d, len(sampler) %d, len(batch_sampler) %d, len(data_loader) %d, is_train %s, is_distributed %s:"
+        (
+            "++++++[train_utils] len(dataset) %d, len(sampler) %d, len(batch_sampler) %d"
+            + "len(data_loader) %d, is_train %s, is_distributed %s:"
+        )
         % (
             len(dataset),
             len(sampler),

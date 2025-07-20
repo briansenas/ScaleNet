@@ -61,11 +61,11 @@ SOLVER:
   WARMUP_METHOD: "linear"
   WEIGHT_DECAY: 0.0001
   STEPS: (60000, 80000)
-  MAX_ITER: 900000
-  IMS_PER_BATCH: 4 # should be divisible by the number of GPUs
+  MAX_ITER: null
+  IMS_PER_BATCH: 8 # should be divisible by the number of GPUs
   PERSON_WEIGHT: 0.01
 TEST:
-  IMS_PER_BATCH: 4 # should be divisible by the number of GPUs(?)
+  IMS_PER_BATCH: 8 # should be divisible by the number of GPUs(?)
 INPUT:
   MIN_SIZE_TRAIN: (600,)
   MAX_SIZE_TRAIN: 800

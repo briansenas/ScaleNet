@@ -49,7 +49,7 @@ def check_eval_COCO(
                         green(
                             (
                                 "scheduler.step with thres_ratio_dict = %.2f at check_eval_coco epoch %d; "
-                                + "lr: %.2f; num_bad_epochs: %d; patience: %d; best: %.2f"
+                                + "lr: %.2E; num_bad_epochs: %d; patience: %d; best: %.2E"
                             )
                             % (
                                 step_metrics,
@@ -271,7 +271,12 @@ def check_save(
     if (
         rank == 0
         and (
-            epoch_save < opt.save_every_epoch or epoch_save % opt.save_every_epoch == 0
+            epoch_save < opt.save_every_epoch
+            or epoch_save % opt.save_every_epoch == 0
+            or (
+                tid != 0
+                and (opt.save_every_iter != 0 and tid % opt.save_every_iter == 0)
+            )
         )
         and epoch_save not in epochs_saved
     ):

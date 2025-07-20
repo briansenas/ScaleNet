@@ -85,7 +85,8 @@ class Checkpointer:
                 f = self.get_checkpoint_file(task_name)
                 self.logger.info(
                     "Using 'latest checkpoint' from task {}...; at {}".format(
-                        task_name, f
+                        task_name,
+                        f,
                     ),
                 )
             else:
@@ -97,7 +98,6 @@ class Checkpointer:
             # no checkpoint could be found
             self.logger.error("No checkpoint found. Initializing model from scratch")
             raise ValueError("No checkpoint found!")
-            return {}
         self.logger.info(
             colored("Loading checkpoint from %s." % f, "white", "on_magenta"),
         )
@@ -120,7 +120,8 @@ class Checkpointer:
             if any(p_len != s_len for p_len, s_len in zip(param_lens, saved_lens)):
                 self.logger.info(
                     colored(
-                        "loaded state dict contains a parameter group that doesn't match the size of optimizer's group! Thus not Restored!",
+                        "loaded state dict contains a parameter group that doesn't match "
+                        + "the size of optimizer's group! Thus not Restored!",
                         "yellow",
                         "on_red",
                     ),
