@@ -36,13 +36,6 @@ def eval_epoch_combine_RCNNOnly(
     prepostfix="",
     epoch=None,
 ):
-    # epoch = 0
-    # Eval
-    # eval_loss = 0
-    # model.eval()
-
-    # logger.info(colored('Validating %d COCO batches...'%len(eval_loader), 'red', 'on_yellow'))
-
     loss_func_l1 = torch.nn.L1Loss()
     if opt.distributed:
         rank = dist.get_rank()
@@ -74,8 +67,7 @@ def eval_epoch_combine_RCNNOnly(
     if_vis_kps = True
 
     with torch.no_grad():
-        with tqdm(total=len(eval_loader)) as t:
-            t.set_description(f"Ep.{epoch} Eval")
+        with tqdm(eval_loader, desc=f"Ep.{epoch} Eval") as t:
             for i, (
                 _,
                 inputCOCO_Image_maskrcnnTransform_list,
@@ -90,7 +82,7 @@ def eval_epoch_combine_RCNNOnly(
                 im_file,
                 target_maskrcnnTransform_list,
                 labels_list,
-            ) in enumerate(tqdm(eval_loader)):
+            ) in enumerate(t):
 
                 if if_debug:
                     print("[eval_epoch] i, rank, im_filename", i, rank, im_filename)
@@ -123,7 +115,6 @@ def eval_epoch_combine_RCNNOnly(
                     if_SUN360=False,
                     if_vis=if_vis,
                 )
-
                 if if_loss:
                     loss_dict_reduced = reduce_loss_dict(
                         loss_dict,
@@ -389,63 +380,71 @@ def eval_epoch_combine_RCNNOnly(
                         mean(eval_loss_person_list) / opt.cfg.SOLVER.PERSON_WEIGHT,
                         tid,
                     )
-                    # writer.add_histogram('val/person_hs_est_all', person_hs_list_concat_all, tid, bins="doane")
-                    writer.add_histogram(
-                        "val/person_hs_est_all",
-                        [
-                            person_h
-                            for person_h, label_h in zip(
-                                person_hs_list_concat_all,
-                                labels_list_all_concat_all,
-                            )
-                            if label_h == "person"
-                        ],
-                        tid,
-                        bins="doane",
-                    )
-                    writer.add_histogram(
-                        "val/car_hs_est_all",
-                        [
-                            person_h
-                            for person_h, label_h in zip(
-                                person_hs_list_concat_all,
-                                labels_list_all_concat_all,
-                            )
-                            if label_h == "car"
-                        ],
-                        tid,
-                        bins="doane",
-                    )
+                    person_hs = [
+                        person_h
+                        for person_h, label_h in zip(
+                            person_hs_list_concat_all,
+                            labels_list_all_concat_all,
+                        )
+                        if label_h == "person"
+                    ]
+                    if person_hs:
+                        writer.add_histogram(
+                            "val/person_hs_est_all",
+                            person_hs,
+                            tid,
+                            bins="doane",
+                        )
+                    car_hs = [
+                        person_h
+                        for person_h, label_h in zip(
+                            person_hs_list_concat_all,
+                            labels_list_all_concat_all,
+                        )
+                        if label_h == "car"
+                    ]
+                    if car_hs:
+                        writer.add_histogram(
+                            "val/car_hs_est_all",
+                            car_hs,
+                            tid,
+                            bins="doane",
+                        )
 
                     for layer_idx, person_hs_list_concat_all_layer in enumerate(
                         person_hs_list_concat_all_layers,
                     ):
-                        writer.add_histogram(
-                            "val_layers/person_hs_est_all_layer%d" % layer_idx,
-                            [
-                                person_h
-                                for person_h, label_h in zip(
-                                    person_hs_list_concat_all_layer,
-                                    labels_list_all_concat_all,
-                                )
-                                if label_h == "person"
-                            ],
-                            tid,
-                            bins="doane",
-                        )
-                        writer.add_histogram(
-                            "val_layers/car_hs_est_all_layer%d" % layer_idx,
-                            [
-                                person_h
-                                for person_h, label_h in zip(
-                                    person_hs_list_concat_all_layer,
-                                    labels_list_all_concat_all,
-                                )
-                                if label_h == "car"
-                            ],
-                            tid,
-                            bins="doane",
-                        )
+
+                        person_hs = [
+                            person_h
+                            for person_h, label_h in zip(
+                                person_hs_list_concat_all_layer,
+                                labels_list_all_concat_all,
+                            )
+                            if label_h == "person"
+                        ]
+                        if person_hs:
+                            writer.add_histogram(
+                                "val_layers/person_hs_est_all_layer%d" % layer_idx,
+                                person_hs,
+                                tid,
+                                bins="doane",
+                            )
+                        car_hs = [
+                            person_h
+                            for person_h, label_h in zip(
+                                person_hs_list_concat_all_layer,
+                                labels_list_all_concat_all,
+                            )
+                            if label_h == "car"
+                        ]
+                        if car_hs:
+                            writer.add_histogram(
+                                "val_layers/car_hs_est_all_layer%d" % layer_idx,
+                                car_hs,
+                                tid,
+                                bins="doane",
+                            )
 
                 _, thres_ratio_dict = sum_bbox_ratios(
                     writer,

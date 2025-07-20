@@ -42,24 +42,26 @@ def check_eval_COCO(
                 epoch=epoch,
             )
             synchronize()
-
             if isinstance(scheduler, ReduceLROnPlateau) and rank == 0:
                 if "SUN360RCNN" not in opt.task_name:
                     step_metrics = return_dict_epoch["thres_ratio_dict"]["0.05"]
                     logger.info(
                         green(
-                            "scheduler.step with thres_ratio_dict = %.2f at check_eval_coco epoch %d; lr: %.2f; num_bad_epochs: %d; patience: %d; best: %.2f"
+                            (
+                                "scheduler.step with thres_ratio_dict = %.2f at check_eval_coco epoch %d; "
+                                + "lr: %.2f; num_bad_epochs: %d; patience: %d; best: %.2f"
+                            )
                             % (
                                 step_metrics,
                                 epoch,
-                                scheduler.get_lr(),
+                                scheduler.optimizer.param_groups[0]["lr"],
                                 scheduler.num_bad_epochs,
                                 scheduler.patience,
                                 scheduler.best,
                             ),
                         ),
                     )
-                    scheduler.step(step_metrics, epoch=epoch)
+                    scheduler.step(step_metrics)
                     is_better = scheduler.num_bad_epochs == 0
                     writer.add_scalar(
                         "training/scheduler-num_bad_epochs",
@@ -120,14 +122,11 @@ def check_eval_SUN360(
                     "eval_loss_sum_SUN360" in return_dict_epoch,
                     scheduler.best,
                 )
-                # if 'eval_loss_sum_SUN360' in return_dict_epoch\
                 if "SUN360RCNN" in opt.task_name:
                     scheduler.step(
                         return_dict_epoch["eval_loss_sum_SUN360"],
-                        epoch=epoch,
                     )
                     is_better = scheduler.num_bad_epochs == 0
-                    # logger.info(green('scheduler.step with lr = %.2f, loss_mean = %.2f, best = %.2f, bad = %d, patience = %d'%(scheduler.get_lr(), return_dict_epoch['eval_loss_sum_SUN360'], scheduler.best, scheduler.num_bad_epochs, scheduler.patience)))
                     logger.info(
                         green(
                             "scheduler.step with loss_mean = %.2f, best = %.2f, bad = %d, patience = %d"
@@ -186,7 +185,7 @@ def check_vis_coco(
         if if_eval_mode:
             model.eval()
         with torch.no_grad():
-            return_dict_epoch = eval_epoch_combine_RCNNOnly(
+            _ = eval_epoch_combine_RCNNOnly(
                 model,
                 eval_loader,
                 device,
@@ -234,7 +233,7 @@ def check_vis_SUN360(
         if if_eval_mode:
             model.eval()
         with torch.no_grad():
-            return_dict_epoch = eval_epoch_cvpr_RCNN(
+            _ = eval_epoch_cvpr_RCNN(
                 model,
                 eval_loader,
                 epoch,
@@ -269,7 +268,6 @@ def check_save(
     is_better=False,
 ):
     arguments = {"iteration": tid, "epoch": epoch_total}
-    # if rank == 0 and epoch != 0 and (epoch < opt.save_every_epoch or epoch % opt.save_every_epoch == 0) and epoch not in epochs_saved:
     if (
         rank == 0
         and (

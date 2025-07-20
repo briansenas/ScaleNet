@@ -441,7 +441,6 @@ class RCNNOnly_combine(nn.Module):
             print(straighten_ratios_list)
 
         if self.opt.pointnet_camH and self.if_classifier_heads:
-            # bboxes_padded = bbox_list_to_bboxes_padded(list_of_bbox_list_cpu, cfg.MODEL.POINTNET.N_PAD_TO, input_dict['H_batch_array'])
             list_of_bboxes = bbox_list_to_list_of_bboxes(list_of_bbox_list_cpu)
             list_of_bboxes_cat = []
             for bbox, v0, H in zip(
@@ -482,10 +481,7 @@ class RCNNOnly_combine(nn.Module):
                     person_h_list_input_discount,
                     self.good_num,
                 )
-                # person_h_padded_input = person_h_padded_input.detach() # !!!!!
             else:
-                # person_h_padded_input = torch.zeros((bboxes_cat_padded.shape[0], bboxes_cat_padded.shape[1], 1), device=bboxes_cat_padded.device, dtype=bboxes_cat_padded.dtype) + 1.75
-                # person_h_padded_input = person_h_padded_input / self.cfg.MODEL.HUMAN.MEAN - 1.
                 person_h_list_175 = [
                     torch.zeros(
                         (length),
@@ -622,7 +618,6 @@ class RCNNOnly_combine(nn.Module):
                 preds_RCNN.update({"vt_camEst_N_delta_np_list": []})
                 for layer_idx in range(self.num_layers - 1):
                     is_last_layer = layer_idx + 1 == self.num_layers - 1
-                    # vt_camEst_N_delta_paded, loss_vt, list_of_vt_camEst_N_delta = self.fit(input_dict, input_dict_misc, preds_RCNN, layer_num=layer_idx+1, if_detach=True)  #!!!!!!!!
                     preds_RCNN["vt_camEst_N_delta_np_list"].append(
                         [
                             vt_camEst_N_delta.detach().cpu().numpy().reshape([-1])
@@ -1017,7 +1012,6 @@ class RCNNOnly_combine(nn.Module):
             if if_fit_derek:
                 bbox_fit_sample = []
             bbox_h_sample = []
-            bbox_geo_sample = []
             bbox_loss_sample = []
 
             vb_batch = H - (bboxes[:, 1] + bboxes[:, 3])  # [top H bottom 0]
@@ -1031,14 +1025,12 @@ class RCNNOnly_combine(nn.Module):
                 "f_pixels_yannick": f_pixels_yannick_est,
                 "pitch_est": pitch_est,
             }
-            # geo_model_input_dict = {'yc_est': yc_est, 'vb': vb, 'y_person': y_person, 'v0': v0, 'vc': vc, 'f_pixels_yannick': f_pixels_yannick}
             if self.opt.accu_model:
                 vt_camEst_batch, _, _ = model_utils.accu_model_batch(
                     geo_model_input_dict,
                     if_debug=False,
                 )  # [top H bottom 0]
             else:
-                #  vt_camEst = model_utils.approx_model(geo_model_input_dict)
                 pass
 
             vt_loss_ori_batch = loss_func(vt_gt_batch, vt_camEst_batch) / bboxes[:, 3]
@@ -1047,13 +1039,11 @@ class RCNNOnly_combine(nn.Module):
                 torch.zeros_like(vt_loss_ori_batch),
                 vt_loss_ori_batch,
             )
-            # vt_loss_ori_sample_list.append(vt_loss_ori_batch.clone().detach())
             vt_loss_batch = torch.clamp(
                 vt_loss_ori_batch,
                 0.0,
                 self.opt.cfg.MODEL.LOSS.VT_LOSS_CLAMP,
             )
-            # vt_loss_sample_list.append(vt_loss)
 
             for bbox_idx, vt_loss in enumerate(vt_loss_batch.cpu()):
                 vt_loss_allBoxes_dict_cpu.update(
@@ -1214,7 +1204,6 @@ class RCNNOnly_combine(nn.Module):
             yc_est_batch = prob_to_est(output_yc_batch, bins, reduce_method)
         return yc_est_batch
 
-
     def person_h_logits_to_person_h_list(
         self,
         class_person_H_logits,
@@ -1260,10 +1249,6 @@ class RCNNOnly_combine(nn.Module):
         direct,
         debug=False,
     ):
-        # assert not self.opt.direct_v0
-        # pass
-        # fmm_est_batch_delta = prob_to_est(fmm_cls_logits_delta, bins, reduce_method)
-        # return fmm_est_batch_delta
         return self.yc_logits_to_est_yc(
             fmm_cls_logits_delta,
             bins,
@@ -1282,9 +1267,6 @@ class RCNNOnly_combine(nn.Module):
         direct,
         debug=False,
     ):
-        # assert not self.opt.direct_v0
-        # v0_est_batch_delta = prob_to_est(v0_cls_logits_delta, bins, reduce_method)
-        # return v0_est_batch_delta
         return self.yc_logits_to_est_yc(
             v0_cls_logits_delta,
             bins,
