@@ -9,11 +9,10 @@ from maskrcnn_benchmark.structures.image_list import to_image_list
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 from maskrcnn_benchmark.utils.comm import get_rank
 from maskrcnn_rui.modeling.backbone import build_backbone
+from maskrcnn_rui.modeling.roi_heads.roi_heads import build_classifier_heads
+from maskrcnn_rui.modeling.roi_heads.roi_heads import build_roi_bbox_heads
+from maskrcnn_rui.modeling.roi_heads.roi_heads import build_roi_h_heads
 from maskrcnn_rui.modeling.rpn.rpn import build_rpn
-from maskrcnn_rui.roi_heads_rui.roi_heads import build_classifier_heads
-from maskrcnn_rui.roi_heads_rui.roi_heads import build_roi_bbox_heads
-from maskrcnn_rui.roi_heads_rui.roi_heads import build_roi_h_heads
-from torchvision import transforms as T
 from torchvision.transforms import functional as F
 from utils.logger import printer
 from utils.model_utils import CATEGORIES
@@ -98,10 +97,12 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
 
         # self.if_camH_pointnet = 'camH_pointnet' not in modules_not_build and opt.pointnet_camH
         # if self.if_camH_pointnet:
-        #     self.camH_pointnet = CamHPointNet(in_channels=6, out_channels=cfg.MODEL.CLASSIFIER_HEADNUM_CLASSES.NUM_CLASSES)
+        #     self.camH_pointnet =
+        #          CamHPointNet(in_channels=6, out_channels=cfg.MODEL.CLASSIFIER_HEADNUM_CLASSES.NUM_CLASSES)
 
     def prepare_images(self, inputCOCO_Image_maskrcnnTransform_list):
-        # Transform so that the min size is no smaller than cfg.INPUT.MIN_SIZE_TRAIN, and the max size is no larger than cfg.INPUT.MIN_SIZE_TRAIN
+        # Transform so that the min size is no smaller than
+        # cfg.INPUT.MIN_SIZE_TRAIN, and the max size is no larger than cfg.INPUT.MIN_SIZE_TRAIN
         # image_batch = [self.transforms(original_image) for original_image in original_image_batch_list]
         image_batch = inputCOCO_Image_maskrcnnTransform_list
         image_sizes_after_transform = [
@@ -144,11 +145,11 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
 
         assert input_data in ["coco", "SUN360", "IMDB-23K"]
 
-        if_print = self.training
-        # if self.training and (list_of_bbox_list_cpu is None or list_of_oneLargeBbox_list_cpu is None):
-        #     raise ValueError("In training mode, targets should be passed")
+        if self.training and (
+            list_of_bbox_list_cpu is None or list_of_oneLargeBbox_list is None
+        ):
+            raise ValueError("In training mode, targets should be passed")
 
-        # images = to_image_list(images)
         images, image_sizes_after_transform = self.prepare_images(
             original_image_batch_list,
         )
@@ -178,14 +179,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                     target_idxes_with_valid_kps_list.append(np.where(kps_mask))
                     target_with_valid_kps_list.append(target_with_valid_kps)
                 targets = targets_dup
-
-                # targets = target_with_valid_kps_list
-
-                # extra_bboxes = extra_bboxes.resize(image_sizes_after_transform)
-                # extra_bboxes.size = proposals[0].size
-                # proposals = [extra_bboxes]
             return_dict.update({"proposals": proposals})
-            # if self.roi_bbox_heads:
             x, proposals, predictions, detector_losses, outputs_roi_bbox_heads = (
                 self.roi_bbox_heads(
                     self.opt,
@@ -202,7 +196,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                     "detector_losses": detector_losses,
                 },
             )
-
 
             if self.training:
                 return_dict.update(detector_losses)
@@ -221,26 +214,20 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                     image_sizes_after_transform,
                 )
             ]
-            bbox_lengths = [len(bbox_list) for bbox_list in list_of_bbox_list]
+            # NOTE: Why doesn't my predictions match the expected ones?
+            # NOTE: I need to set it to predictions to be able to split the softmax of person_h_logits?
+            # bbox_lengths = [len(bbox_list) for bbox_list in list_of_bbox_list]
+            bbox_lengths = [len(bbox_list) for bbox_list in predictions]
             return_dict.update({"bbox_lengths": bbox_lengths})
 
             if self.if_roi_h_heads:
-                if if_print:
-                    # list([BoxList(num_boxes=1000, image_width=1066, image_height=800, mode=xyxy)])
-                    self.printer.print(
-                        "[generalized_rcnn_rui] list_of_bbox_list:",
-                        list_of_bbox_list,
-                    )
-
                 if self.if_shared_kps_head:
                     class_logits = outputs_roi_bbox_heads["person_h_logits"]
                 else:
                     roi_heads_output = self.roi_h_heads(features, list_of_bbox_list)
                     class_logits = roi_heads_output["class_logits"]
                 class_logits_softmax = nn.functional.softmax(class_logits, dim=1)
-
                 class_logits_softmax_list = class_logits_softmax.split(bbox_lengths)
-
                 return_dict.update(
                     {
                         "class_person_H_logits_softmax_list": class_logits_softmax_list,
@@ -249,10 +236,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                         "bbox_lengths": bbox_lengths,
                     },
                 )
-
-                # roi_feats = roi_heads_output['feats'] # [N_all, D]
-                # return_dict.update({'roi_feats': roi_feats})
-
         # Global feat with list_of_oneLargeBbox_list_cpu
         if list_of_oneLargeBbox_list is not None and self.if_classifier_heads:
             list_of_oneLargeBbox_list = [
@@ -273,8 +256,9 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                 },
             )
             if not self.opt.pointnet_camH:
-                # return_dict.update({'output_camH': cls_outputs['output_camH']['class_logits']})
-                pass
+                return_dict.update(
+                    {"output_camH": cls_outputs["output_camH"]["class_logits"]},
+                )
 
         return return_dict
 
@@ -482,7 +466,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                 torch.cat((kps[:, :, 0:2], scores[:, :, None]), dim=2).cpu().numpy()
             )  # (2, 17, 3)
         ratio_batch = []
-        for region_idx, kps in enumerate(kps_batch):
+        for kps in kps_batch:
             kps = kps.transpose((1, 0))
 
             dataset_keypoints = PersonKeypoints.NAMES
@@ -528,7 +512,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
             else:
                 which_side_weight_array = [0.0, 0.0]
 
-            for which_side, which_side_vis, which_side_weight in zip(
+            for which_side, _, which_side_weight in zip(
                 ["left", "right"],
                 which_side_vis_list,
                 which_side_weight_array,

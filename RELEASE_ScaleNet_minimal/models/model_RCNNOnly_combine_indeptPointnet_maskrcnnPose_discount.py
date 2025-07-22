@@ -176,7 +176,7 @@ class RCNNOnly_combine(nn.Module):
                                 },
                             )
 
-    def init_restore(self, old=False, if_print=False):
+    def init_restore(self):
         save_dir = self.cfg.OUTPUT_DIR
         checkpointer = DetectronCheckpointer(
             self.opt,
@@ -276,21 +276,20 @@ class RCNNOnly_combine(nn.Module):
         # if self.cfg.MODEL.KEYPOINT_ON:
         # Load h and kps head
         if self.RCNN.if_shared_kps_head:
-            if self.opt.est_kps:
-                if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD:
-                    _ = checkpointer.load(
-                        task_name=self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD,
-                        only_load_kws=["roi_bbox_heads.keypoint"],
-                        skip_kws=["roi_bbox_heads.keypoint.predictor_person_h"],
-                    )
-                else:
-                    _ = checkpointer.load(
-                        f=self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD,
-                        only_load_kws=["roi_bbox_heads.keypoint"],
-                        skip_kws=["roi_bbox_heads.keypoint.predictor_person_h"],
-                        replace_kws=["roi_bbox_heads.keypoint"],
-                        replace_with_kws=["roi_heads.keypoint"],
-                    )
+            if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD:
+                _ = checkpointer.load(
+                    task_name=self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD,
+                    only_load_kws=["roi_bbox_heads.keypoint"],
+                    skip_kws=["roi_bbox_heads.keypoint.predictor_person_h"],
+                )
+            else:
+                _ = checkpointer.load(
+                    f=self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD,
+                    only_load_kws=["roi_bbox_heads.keypoint"],
+                    skip_kws=["roi_bbox_heads.keypoint.predictor_person_h"],
+                    replace_kws=["roi_bbox_heads.keypoint"],
+                    replace_with_kws=["roi_heads.keypoint"],
+                )
 
     def forward(
         self,
@@ -307,8 +306,6 @@ class RCNNOnly_combine(nn.Module):
         :return:
         """
         device = input_dict_misc["device"]
-        rank = input_dict_misc["rank"]
-        tid = input_dict_misc["tid"]
 
         track_list = {}
         if im_filename is not None and self.if_print:
@@ -381,9 +378,9 @@ class RCNNOnly_combine(nn.Module):
                     raise ValueError("opt.discount_from must be in ('GT', 'pred')!")
 
         straighten_ratios_list = []
-        for image_idx, box_list_kps in enumerate(list_of_box_list_kps_gt_clone):
+        # NOTE: if I attempt to use the GT box list it failts at the zip(person_h, straight_ratios_list)
+        for image_idx, box_list_kps in enumerate(output_RCNN["predictions"]):
             if self.opt.if_discount:
-                # straighten_ratios = self.RCNN.get_straighten_ratio_from_pred(box_list_kps, gt_input=gt_input)
                 straighten_ratios = (
                     torch.tensor(where_to_cal_ratios[image_idx]).to(device).float()
                 )
@@ -392,7 +389,6 @@ class RCNNOnly_combine(nn.Module):
                     torch.ones(box_list_kps.bbox.shape[0]).to(device).float()
                 )  # !!!!!!!
             straighten_ratios_list.append(straighten_ratios)
-
         preds_RCNN = {}
         if list_of_oneLargeBbox_list is not None and self.if_classifier_heads:
             preds_RCNN = self.get_RCNN_predictions(
@@ -434,12 +430,8 @@ class RCNNOnly_combine(nn.Module):
                 )
             else:
                 output_RCNN.update({"loss_all_person_h_list": []})
-            # output_RCNN.update({'loss_all_person_h_list': [preds_RCNN['loss_all_person_h']]})
 
         preds_RCNN["straighten_ratios_list"] = straighten_ratios_list
-        if rank == 0 and self.opt.if_discount and tid % 20 == 0:
-            print(straighten_ratios_list)
-
         if self.opt.pointnet_camH and self.if_classifier_heads:
             list_of_bboxes = bbox_list_to_list_of_bboxes(list_of_bbox_list_cpu)
             list_of_bboxes_cat = []
@@ -570,7 +562,7 @@ class RCNNOnly_combine(nn.Module):
                         "person_hs_est_np_list_canonical": [
                             [
                                 (person_hs).detach().cpu().numpy()
-                                for person_hs, straighten_ratios in zip(
+                                for person_hs, _ in zip(
                                     person_h_list,
                                     straighten_ratios_list,
                                 )
@@ -834,7 +826,6 @@ class RCNNOnly_combine(nn.Module):
                             output_RCNN["loss_all_person_h_list"].append(
                                 loss_all_person_h,
                             )
-                        # output_RCNN['loss_all_person_h_list'].append(loss_all_person_h)
 
                         preds_RCNN["person_hs_est_np_list"].append(
                             [
@@ -953,20 +944,16 @@ class RCNNOnly_combine(nn.Module):
             input_dict_show["bbox_loss"] = []
 
         loss_func = torch.nn.L1Loss(reduction="none")
+
         for idx, bboxes_length in enumerate(input_dict["bboxes_length_batch_array"]):
             bboxes = input_dict_misc["bboxes_batch"][idx][:bboxes_length]  # [N, 4]
-            # labels = input_dict["labels_list"]
             H = input_dict_misc["H_batch"][idx]
             vc = H / 2.0
             v0_est = preds_RCNN["v0_batch_est"][idx]
             pitch_est = preds_RCNN["pitch_batch_est"][idx]
             f_pixels_yannick_est = preds_RCNN["f_pixels_batch_est"][idx]
-            # inv_f2 = 1.0 / (f_pixels_yannick_est * f_pixels_yannick_est)
             yc_est = preds_RCNN["yc_est_batch"][idx]
-
             H_np = input_dict_misc["H_batch"][idx].cpu().numpy()
-            # W_np = input_dict_misc["W_batch"][idx].cpu().numpy()
-
             if self.opt.not_rcnn:
                 h_human_s = (
                     torch.from_numpy(
@@ -976,6 +963,7 @@ class RCNNOnly_combine(nn.Module):
                     .to(self.opt.device)
                 )  # + 0. * preds_RCNN['person_h_list'][idx]
             else:
+                # NOTE: This are predictions and don't match the GT bboxes length?
                 h_human_s = (
                     preds_RCNN["person_h_list"][idx]
                     * preds_RCNN["straighten_ratios_list"][idx]
@@ -985,8 +973,6 @@ class RCNNOnly_combine(nn.Module):
                 v0_est = v0_est.detach()
                 pitch_est = pitch_est.detach()
                 f_pixels_yannick_est = f_pixels_yannick_est.detach()
-                # yc_est = yc_est.detach()
-                # h_human_s = h_human_s.detach()
 
             if if_fit_derek:
                 # Fitting 现场: getting camera heights
@@ -1016,22 +1002,24 @@ class RCNNOnly_combine(nn.Module):
 
             vb_batch = H - (bboxes[:, 1] + bboxes[:, 3])  # [top H bottom 0]
             vt_gt_batch = H - bboxes[:, 1]  # [top H bottom 0]
+            y_person = h_human_s * torch.cos(pitch_est)
             geo_model_input_dict = {
                 "yc_est": yc_est,
                 "vb": vb_batch,
-                "y_person": h_human_s * torch.cos(pitch_est),
+                "y_person": y_person,
                 "v0": v0_est,
                 "vc": vc,
                 "f_pixels_yannick": f_pixels_yannick_est,
                 "pitch_est": pitch_est,
             }
+            # NOTE: In the RELEASE notebook they have a more length condition for accu_model
             if self.opt.accu_model:
                 vt_camEst_batch, _, _ = model_utils.accu_model_batch(
                     geo_model_input_dict,
                     if_debug=False,
                 )  # [top H bottom 0]
             else:
-                pass
+                vt_camEst_batch = model_utils.approx_model(geo_model_input_dict)
 
             vt_loss_ori_batch = loss_func(vt_gt_batch, vt_camEst_batch) / bboxes[:, 3]
             vt_loss_ori_batch = torch.where(
@@ -1301,9 +1289,6 @@ class RCNNOnly_combine(nn.Module):
                 all_person_hs,
                 output_RCNN["bbox_lengths"],
             )
-
-        if not self.opt.pointnet_camH:
-            pass
 
         # Yannick/s module
         vfov_estim = prob_to_est(
