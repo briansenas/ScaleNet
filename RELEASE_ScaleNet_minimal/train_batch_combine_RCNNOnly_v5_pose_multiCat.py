@@ -132,9 +132,7 @@ def train_batch_combine(
             f_mm_array_est = f_pixels_to_mm(f_pixels_yannick_batch_est, input_dict)
 
         if opt.pointnet_camH:
-            # output_yc_batch = output_RCNN["output_yc_batch"]
             yc_est_batch = output_RCNN["yc_est_batch"]
-            # yc_est_batch_list = output_RCNN['yc_est_batch_list']
             return_dict.update(
                 {
                     "yc_est_batch": yc_est_batch,
