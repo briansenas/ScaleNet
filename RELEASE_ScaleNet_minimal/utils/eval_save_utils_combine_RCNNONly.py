@@ -108,8 +108,6 @@ def check_eval_SUN360(
                 tid,
                 device,
                 writer,
-                None,
-                -1,
                 logger,
                 opt,
             )

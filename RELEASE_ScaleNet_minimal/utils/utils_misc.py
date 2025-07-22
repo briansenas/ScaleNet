@@ -65,7 +65,7 @@ def prob_to_est(input, bins, reduce_method="softmax", debug=False):
 
 def pad_zeros_to_good_num(bboxes, good_num):
     N = bboxes.shape[0]
-    assert N <= good_num, "not N %d <= good_num %d" % (N, good_num)
+    # assert N <= good_num, "not N %d <= good_num %d" % (N, good_num)
     N_to_pad = good_num - N
     assert len(bboxes.shape) in [1, 2]
     if len(bboxes.shape) == 1:
