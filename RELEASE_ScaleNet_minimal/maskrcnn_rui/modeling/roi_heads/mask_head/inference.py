@@ -1,10 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import numpy as np
 import torch
-from torch import nn
 from maskrcnn_benchmark.layers.misc import interpolate
-
 from maskrcnn_benchmark.structures.bounding_box import BoxList
+from torch import nn
 
 
 # TODO check if want to return a single BoxList or a composite
@@ -21,7 +19,7 @@ class MaskPostProcessor(nn.Module):
     """
 
     def __init__(self, masker=None):
-        super(MaskPostProcessor, self).__init__()
+        super().__init__()
         self.masker = masker
 
     def forward(self, x, boxes):
@@ -72,7 +70,7 @@ class MaskPostProcessorCOCOFormat(MaskPostProcessor):
         import pycocotools.mask as mask_util
         import numpy as np
 
-        results = super(MaskPostProcessorCOCOFormat, self).forward(x, boxes)
+        results = super().forward(x, boxes)
         for result in results:
             masks = result.get_field("mask").cpu()
             rles = [
@@ -89,10 +87,10 @@ class MaskPostProcessorCOCOFormat(MaskPostProcessor):
 # but are kept here for the moment while we need them
 # temporarily gor paste_mask_in_image
 def expand_boxes(boxes, scale):
-    w_half = (boxes[:, 2] - boxes[:, 0]) * .5
-    h_half = (boxes[:, 3] - boxes[:, 1]) * .5
-    x_c = (boxes[:, 2] + boxes[:, 0]) * .5
-    y_c = (boxes[:, 3] + boxes[:, 1]) * .5
+    w_half = (boxes[:, 2] - boxes[:, 0]) * 0.5
+    h_half = (boxes[:, 3] - boxes[:, 1]) * 0.5
+    x_c = (boxes[:, 2] + boxes[:, 0]) * 0.5
+    y_c = (boxes[:, 3] + boxes[:, 1]) * 0.5
 
     w_half *= scale
     h_half *= scale
@@ -137,7 +135,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 
     # Resize mask
     mask = mask.to(torch.float32)
-    mask = interpolate(mask, size=(h, w), mode='bilinear', align_corners=False)
+    mask = interpolate(mask, size=(h, w), mode="bilinear", align_corners=False)
     mask = mask[0][0]
 
     if thresh >= 0:
@@ -145,21 +143,22 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     else:
         # for visualization and debugging, we also
         # allow it to return an unmodified mask
-        mask = (mask * 255).to(torch.bool)
+        mask = (mask * 255).to(torch.uint8)
 
-    im_mask = torch.zeros((im_h, im_w), dtype=torch.bool)
+    im_mask = torch.zeros((im_h, im_w), dtype=torch.uint8)
     x_0 = max(box[0], 0)
     x_1 = min(box[2] + 1, im_w)
     y_0 = max(box[1], 0)
     y_1 = min(box[3] + 1, im_h)
 
     im_mask[y_0:y_1, x_0:x_1] = mask[
-        (y_0 - box[1]) : (y_1 - box[1]), (x_0 - box[0]) : (x_1 - box[0])
+        (y_0 - box[1]) : (y_1 - box[1]),
+        (x_0 - box[0]) : (x_1 - box[0]),
     ]
     return im_mask
 
 
-class Masker(object):
+class Masker:
     """
     Projects a set of masks in an image on the locations
     specified by the bounding boxes

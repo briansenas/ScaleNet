@@ -23,7 +23,7 @@ _C.MODEL = CN()
 _C.MODEL.RPN_ONLY = False
 _C.MODEL.MASK_ON = False
 _C.MODEL.RETINANET_ON = False
-_C.MODEL.KEYPOINT_ON = False
+_C.MODEL.KEYPOINT_ON = True
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.NAME = ""
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
@@ -33,15 +33,15 @@ _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
 # the path in paths_catalog. Else, it will use it as the specified absolute
 # path
 _C.MODEL.WEIGHT = ""
-_C.MODEL.RCNN_WEIGHT = ""
-_C.MODEL.RCNN_WEIGHT_BACKBONE = ""
-_C.MODEL.RCNN_WEIGHT_BOX_HEAD = ""
-_C.MODEL.RCNN_WEIGHT_KPS_HEAD = ""
-_C.MODEL.RCNN_WEIGHT_CLS_HEAD = ""
+_C.MODEL.RCNN_WEIGHT = "detectron2://COCO-Keypoints/keypoint_rcnn_R_50_FPN_1x/139840973/model_final_a6e10b.pkl"
+_C.MODEL.RCNN_WEIGHT_BACKBONE = "checkpoint/checkpointer_epoch0055_iter0136785.pth"
+_C.MODEL.RCNN_WEIGHT_BOX_HEAD = "checkpoint/checkpointer_epoch0055_iter0136785.pth"
+_C.MODEL.RCNN_WEIGHT_KPS_HEAD = "checkpoint/checkpointer_epoch0055_iter0136785.pth"
+_C.MODEL.RCNN_WEIGHT_CLS_HEAD = "checkpoint/checkpointer_epoch0055_iter0136785.pth"
 _C.MODEL.DENSENET_WEIGHT = ""
 
 _C.MODEL.LOSS = CN()
-_C.MODEL.LOSS.VT_LOSS_CLAMP = 10.
+_C.MODEL.LOSS.VT_LOSS_CLAMP = 2.0
 
 
 # -----------------------------------------------------------------------------
@@ -59,7 +59,7 @@ _C.INPUT.MAX_SIZE_TEST = 1333
 # Values to be used for image normalization
 _C.INPUT.PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
 # Values to be used for image normalization
-_C.INPUT.PIXEL_STD = [1., 1., 1.]
+_C.INPUT.PIXEL_STD = [1.0, 1.0, 1.0]
 # Convert image to BGR format (for Caffe2 models), in range 0-255
 _C.INPUT.TO_BGR255 = True
 
@@ -102,7 +102,6 @@ _C.DATA.COCO.GOOD_NUM = 10
 _C.DATA.COCO.CLIP_N_IN_MASKRCNN = False
 # _C.DATA.COCO.TRAIN_VAL_OVERRIDE = ''
 _C.DATA.COCO.COCO_SUBSET = "coco_scale_eccv"
-
 
 
 # ---------------------------------------------------------------------------- #
@@ -203,7 +202,7 @@ _C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 # Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
 # These are empirically chosen to approximately lead to unit variance targets
-_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
+_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
 #   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH
@@ -217,13 +216,13 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 # Minimum score threshold (assuming scores in a [0, 1] range); a value chosen to
 # balance obtaining high recall with not having too many low precision
 # detections that will slow down inference post processing steps (like NMS)
-_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.05
+_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.01
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 _C.MODEL.ROI_HEADS.NMS = 0.5
 # Maximum number of detections to return per image (100 is based on the limit
 # established for the COCO dataset)
-_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 100
+_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 10
 
 
 _C.MODEL.ROI_BOX_HEAD = CN()
@@ -263,7 +262,7 @@ _C.MODEL.ROI_MASK_HEAD.POOLER_SCALES = (1.0 / 16,)
 _C.MODEL.ROI_MASK_HEAD.MLP_HEAD_DIM = 1024
 _C.MODEL.ROI_MASK_HEAD.CONV_LAYERS = (256, 256, 256, 256)
 _C.MODEL.ROI_MASK_HEAD.RESOLUTION = 14
-_C.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
+_C.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = False
 # Whether or not resize and translate masks to the input image.
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS = False
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD = 0.5
@@ -282,8 +281,8 @@ _C.MODEL.ROI_KEYPOINT_HEAD.MLP_HEAD_DIM = 1024
 _C.MODEL.ROI_KEYPOINT_HEAD.CONV_LAYERS = tuple(512 for _ in range(8))
 _C.MODEL.ROI_KEYPOINT_HEAD.RESOLUTION = 14
 _C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
-_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES_h = 0
-_C.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
+_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES_h = 256
+_C.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = False
 
 # ---------------------------------------------------------------------------- #
 # ResNe[X]t options (ResNets = {ResNet, ResNeXt}
@@ -429,7 +428,7 @@ _C.MODEL.CAR.STD = 0.21
 
 _C.MODEL.POINTNET = CN()
 _C.MODEL.POINTNET.N_PAD_TO = 10
-_C.MODEL.POINTNET.PATH = ''
+_C.MODEL.POINTNET.PATH = ""
 
 # ---------------------------------------------------------------------------- #
 # Solver
@@ -458,11 +457,11 @@ _C.SOLVER.TEST_PERIOD = 0
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.SOLVER.IMS_PER_BATCH = 16
+_C.SOLVER.IMS_PER_BATCH = 2
 
 _C.SOLVER.STEP_LR_SIZE = 0
 
-_C.SOLVER.PERSON_WEIGHT = 0.1
+_C.SOLVER.PERSON_WEIGHT = 0.05
 
 # ---------------------------------------------------------------------------- #
 # Specific test options
@@ -473,9 +472,9 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.TEST.IMS_PER_BATCH = 8
+_C.TEST.IMS_PER_BATCH = 1
 # Number of detections per image
-_C.TEST.DETECTIONS_PER_IMG = 100
+_C.TEST.DETECTIONS_PER_IMG = 25
 
 # ---------------------------------------------------------------------------- #
 # Test-time augmentations for bounding box detection

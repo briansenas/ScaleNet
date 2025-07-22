@@ -1,12 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
 import torch.nn.functional as F
-from torch import nn
-
+from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
-from maskrcnn_benchmark.modeling.box_coder import BoxCoder
+from torch import nn
 
 
 class PostProcessor(nn.Module):
@@ -23,7 +22,7 @@ class PostProcessor(nn.Module):
         detections_per_img=100,
         box_coder=None,
         cls_agnostic_bbox_reg=False,
-        bbox_aug_enabled=False
+        bbox_aug_enabled=False,
     ):
         """
         Arguments:
@@ -32,12 +31,12 @@ class PostProcessor(nn.Module):
             detections_per_img (int)
             box_coder (BoxCoder)
         """
-        super(PostProcessor, self).__init__()
+        super().__init__()
         self.score_thresh = score_thresh
         self.nms = nms
         self.detections_per_img = detections_per_img
         if box_coder is None:
-            box_coder = BoxCoder(weights=(10., 10., 5., 5.))
+            box_coder = BoxCoder(weights=(10.0, 10.0, 5.0, 5.0))
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
         self.bbox_aug_enabled = bbox_aug_enabled
@@ -65,7 +64,8 @@ class PostProcessor(nn.Module):
         if self.cls_agnostic_bbox_reg:
             box_regression = box_regression[:, -4:]
         proposals = self.box_coder.decode(
-            box_regression.view(sum(boxes_per_image), -1), concat_boxes
+            box_regression.view(sum(boxes_per_image), -1),
+            concat_boxes,
         )
         if self.cls_agnostic_bbox_reg:
             proposals = proposals.repeat(1, class_prob.shape[1])
@@ -77,7 +77,9 @@ class PostProcessor(nn.Module):
 
         results = []
         for prob, boxes_per_img, image_shape in zip(
-            class_prob, proposals, image_shapes
+            class_prob,
+            proposals,
+            image_shapes,
         ):
             boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
             boxlist = boxlist.clip_to_image(remove_empty=False)
@@ -120,17 +122,19 @@ class PostProcessor(nn.Module):
         # Skip j = 0, because it's the background class
         inds_all = scores > self.score_thresh
         for j in range(1, num_classes):
-            inds = inds_all[:, j].nonzero().squeeze(1)
+            inds = inds_all[:, j].nonzero(as_tuple=False).squeeze(1)
             scores_j = scores[inds, j]
             boxes_j = boxes[inds, j * 4 : (j + 1) * 4]
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
             boxlist_for_class.add_field("scores", scores_j)
             boxlist_for_class = boxlist_nms(
-                boxlist_for_class, self.nms
+                boxlist_for_class,
+                self.nms,
             )
             num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(
-                "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
+                "labels",
+                torch.full((num_labels,), j, dtype=torch.int64, device=device),
             )
             result.append(boxlist_for_class)
 
@@ -141,7 +145,8 @@ class PostProcessor(nn.Module):
         if number_of_detections > self.detections_per_img > 0:
             cls_scores = result.get_field("scores")
             image_thresh, _ = torch.kthvalue(
-                cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
+                cls_scores.cpu(),
+                number_of_detections - self.detections_per_img + 1,
             )
             keep = cls_scores >= image_thresh.item()
             keep = torch.nonzero(keep).squeeze(1)
@@ -150,7 +155,7 @@ class PostProcessor(nn.Module):
 
 
 def make_roi_box_post_processor(cfg):
-    use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
+    # use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
 
     bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
     box_coder = BoxCoder(weights=bbox_reg_weights)
@@ -167,6 +172,6 @@ def make_roi_box_post_processor(cfg):
         detections_per_img,
         box_coder,
         cls_agnostic_bbox_reg,
-        bbox_aug_enabled
+        bbox_aug_enabled,
     )
     return postprocessor
