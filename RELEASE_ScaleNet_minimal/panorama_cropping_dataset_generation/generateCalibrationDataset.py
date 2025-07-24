@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import random
@@ -19,11 +20,6 @@ from tqdm import tqdm
 DEBUG = False
 DISPLAY = False
 
-input_dir = "data/SUN360/train/RGB/"
-output_dir = "data/crops_dataset_cvpr_myDistWider20200403"
-
-os.makedirs(output_dir, exist_ok=True)
-os.makedirs(os.path.join(output_dir, "debug"), exist_ok=True)
 
 aspect_ratios, ar_probabilities = zip(
     *(
@@ -245,6 +241,22 @@ def process(im_path):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--input_dir",
+        type=str,
+        default="data/SUN360/train/RGB",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="data/SUN360/train_crops_dataset_cvpr_myDistWider",
+    )
+    args = parser.parse_args()
+    input_dir = args.input_dir
+    output_dir = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "debug"), exist_ok=True)
     with DispDebug("Listing SUN360..."):
         images = glob(input_dir + "/**/*.jpg", recursive=True)
 
