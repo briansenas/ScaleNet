@@ -4,9 +4,10 @@ import numpy as np
 import os
 import os.path
 import sys
+from tqdm import tqdm
 from math import degrees
 from scipy.ndimage.interpolation import map_coordinates
-from scipy.misc import imread, imsave
+from skimage.io import imread, imsave
 
 PACKAGE_PARENT = ".."
 SCRIPT_DIR = os.path.dirname(
@@ -211,46 +212,48 @@ def extractImage(
 
 def demo():
     # NOTE: What is this?
-    imgdir = "/home/j/Documents/GitRepos/OutdoorIllumination/data/"
-    imglist = ["pano_askvbepeztrtfo.jpg", "pano_awouoctwfnhqsv.jpg"]
+    imgdir = "data/SUN360/train/RGB"
+    outdir = "data/SUN360/examples"
+    imglist = [
+        "pano_7e261faee7882358d50196b559a86cc4.jpg",
+        "pano_7f2d0d9090eb46d20b19a4219dd8ede9.jpg",
+    ]
 
-    os.makedirs(imgdir + "output", exist_ok=True)
+    os.makedirs(outdir, exist_ok=True)
 
     imid = 0
     for img_name in imglist:
         img_path = os.path.join(imgdir, img_name)
         img = imread(img_path).astype(np.float32)
+        imsave(
+            os.path.join(
+                outdir,
+                f"{img_name}.png",
+            ),
+            img.astype("uint8"),
+        )
         phi = 0
         lambda_ = 0
         for _ in range(1):  # phi in np.arange(-np.pi/2, np.pi/2 + np.pi/6, np.pi/2):
             for _ in range(1):  # lambda_ in np.arange(-np.pi, np.pi, np.pi/2):
-                for roll in np.arange(-np.pi, np.pi, np.pi / 4):
+                for roll in tqdm(np.arange(-np.pi, np.pi, np.pi / 4)):
                     out = extractImage(img, [phi, lambda_, roll], 320)
                     mask = extractImage(img, [phi, lambda_, roll], 320, mode="maskbool")
                     basename = os.path.splitext(os.path.basename(img_path))[0]
-
-                    print(
-                        os.path.join(
-                            imgdir,
-                            "output",
-                            f"{basename}_{degrees(roll)}.png",
-                        ),
-                    )
                     imsave(
                         os.path.join(
-                            imgdir,
-                            "output",
+                            outdir,
                             f"{basename}_{degrees(roll)}.png",
                         ),
                         out.astype("uint8"),
                     )
                     imsave(
                         os.path.join(
-                            imgdir,
-                            "output",
+                            outdir,
                             f"{basename}_mask_{degrees(roll)}.png",
                         ),
                         mask.astype("uint8"),
+                        check_contrast=False,
                     )
                     imid += 1
 

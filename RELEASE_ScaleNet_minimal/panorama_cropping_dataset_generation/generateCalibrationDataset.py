@@ -4,15 +4,15 @@ import random
 from glob import glob
 from multiprocessing import Pool
 
-import image_extraction
 import numpy as np
-from debugging import showHorizonLine
-from hdrio import imread
-from helpers import DispDebug
-from imageio import imsave
+import panorama_cropping_dataset_generation.image_extraction as image_extraction
+from panorama_cropping_dataset_generation.debugging import showHorizonLine
+from panorama_cropping_dataset_generation.helpers import DispDebug
 from PIL import Image
 from scipy.stats import cauchy
 from scipy.stats import lognorm
+from skimage.io import imread
+from skimage.io import imsave
 from tqdm import tqdm
 
 
@@ -227,7 +227,7 @@ def process(im_path):
     if os.path.isfile(metadata_path):
         return
 
-    im = imread(im_path, "native")
+    im = imread(im_path)
     if len(im.shape) == 2:
         im = np.stack((im,) * 3, axis=-1)
     else:
@@ -246,10 +246,7 @@ def process(im_path):
 
 if __name__ == "__main__":
     with DispDebug("Listing SUN360..."):
-        # images = glob("/newfoundland/data_extra/SUN360/pano9104x4552/**/*.jpg", recursive=True)
         images = glob(input_dir + "/**/*.jpg", recursive=True)
-
-    import random
 
     random.seed(31415926)
     random.shuffle(images)
