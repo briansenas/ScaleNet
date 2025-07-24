@@ -19,7 +19,7 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
 pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
 
-DS_ROOT = "data/SUN360_mini_crops_dataset_cvpr_myDistNarrowerLarge1105"
+DS_ROOT = "data/SUN360/SUN360_crops_dataset_cvpr_myDistWider"
 
 if "Narrower" in DS_ROOT:
     # crops_dataset_cvpr_myDistNarrower
@@ -44,10 +44,10 @@ if "Narrower" in DS_ROOT:
     vfov_bins_centers[:-1] += np.diff(vfov_bins_centers) / 2
     vfov_bins_centers = np.append(vfov_bins_centers, vfov_bins[-1])
 
-elif "Wider20200403" in DS_ROOT:
+elif "Wider" in DS_ROOT:
     print(
         colored(
-            "[data-SUN360] Wider20200403 in DS_ROOT:" + DS_ROOT,
+            "[data-SUN360] Wider in DS_ROOT:" + DS_ROOT,
             "white",
             "on_blue",
         ),
@@ -168,7 +168,7 @@ class SUN360Horizon:
         transforms=None,
         train=True,
         logger=None,
-        json_name: str = "config/SUN360_mini_crops_dataset_cvpr_myDistNarrowerLarge1105.json",
+        json_name: str = "config/SUN360_crops_dataset_cvpr_myDistWider.json",
     ):
 
         self.transforms = transforms
