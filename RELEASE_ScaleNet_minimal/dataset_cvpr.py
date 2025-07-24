@@ -168,7 +168,7 @@ class SUN360Horizon:
         transforms=None,
         train=True,
         logger=None,
-        json_name: str = "config/SUN360_crops_dataset_cvpr_myDistWider.json",
+        json_name: str = "config/train_crops_dataset_cvpr_myDistWider.json",
     ):
 
         self.transforms = transforms
