@@ -19,7 +19,7 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 pitch_bins_low = np.linspace(-np.pi / 2 + 1e-5, -5 * np.pi / 180.0, 31)
 pitch_bins_high = np.linspace(5 * np.pi / 180.0, np.pi / 6, 31)
 
-DS_ROOT = "data/SUN360/SUN360_crops_dataset_cvpr_myDistWider"
+DS_ROOT = "data/SUN360/train_crops_dataset_cvpr_myDistWider"
 
 if "Narrower" in DS_ROOT:
     # crops_dataset_cvpr_myDistNarrower
