@@ -145,11 +145,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
 
         assert input_data in ["coco", "SUN360", "IMDB-23K"]
 
-        if self.training and (
-            list_of_bbox_list_cpu is None or list_of_oneLargeBbox_list is None
-        ):
-            raise ValueError("In training mode, targets should be passed")
-
         images, image_sizes_after_transform = self.prepare_images(
             original_image_batch_list,
         )

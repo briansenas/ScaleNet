@@ -208,7 +208,7 @@ def train_batch_combine(
     # ========= Yannick's inputs
     if opt.train_cameraCls and if_SUN360:
         inputSUN360_Image_maskrcnnTransform_list = input_dict[
-            "inputSUN360_Image_maskrcnnTransform_list"
+            "inputSUN360_Image_yannickTransform_list"
         ]
         horizon_dist_gt = input_dict["horizon_dist_gt"].to(device)
         pitch_dist_gt = input_dict["pitch_dist_gt"].to(device)
