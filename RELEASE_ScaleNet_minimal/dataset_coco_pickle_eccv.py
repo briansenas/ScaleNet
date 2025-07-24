@@ -21,11 +21,6 @@ pickle_paths = {
     "test": "data/COCO/coco_results/results_with_kps_20200225_val2017_test_detOnly_filtered_2-8_moreThan2/pickle",
 }
 
-pickle_paths["test"] = (
-    "/results_test_20200302_Car_noSmall-ratio1-35-mergeWith-results_with_kps_20200225_train2017_detOnly_filtered_2-8_moreThan2/pickle"  # MultiCat
-)
-
-
 bbox_paths = {key: pickle_paths[key].replace("/pickle", "/npy") for key in pickle_paths}
 
 
@@ -247,6 +242,7 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
             target_keypoints = PersonKeypoints(kps_gt, im_ori_RGB.size)
             target.add_field("keypoints", target_keypoints)
             target = target.clip_to_image(remove_empty=True)
+        if self.opt.est_kps or self.opt.est_bbox:
             classes = [1] * num_boxes  # !!!!! all person (1) for now...
             classes = [self.json_category_id_to_contiguous_id[c] for c in classes]
             classes = torch.tensor(classes)

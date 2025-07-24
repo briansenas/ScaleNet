@@ -378,8 +378,7 @@ class RCNNOnly_combine(nn.Module):
                     raise ValueError("opt.discount_from must be in ('GT', 'pred')!")
 
         straighten_ratios_list = []
-        # NOTE: if I attempt to use the GT box list it failts at the zip(person_h, straight_ratios_list)
-        for image_idx, box_list_kps in enumerate(output_RCNN["predictions"]):
+        for image_idx, box_list_kps in enumerate(list_of_box_list_kps_gt_clone):
             if self.opt.if_discount:
                 straighten_ratios = (
                     torch.tensor(where_to_cal_ratios[image_idx]).to(device).float()
@@ -963,7 +962,6 @@ class RCNNOnly_combine(nn.Module):
                     .to(self.opt.device)
                 )  # + 0. * preds_RCNN['person_h_list'][idx]
             else:
-                # NOTE: This are predictions and don't match the GT bboxes length?
                 h_human_s = (
                     preds_RCNN["person_h_list"][idx]
                     * preds_RCNN["straighten_ratios_list"][idx]
@@ -1012,7 +1010,6 @@ class RCNNOnly_combine(nn.Module):
                 "f_pixels_yannick": f_pixels_yannick_est,
                 "pitch_est": pitch_est,
             }
-            # NOTE: In the RELEASE notebook they have a more length condition for accu_model
             if self.opt.accu_model:
                 vt_camEst_batch, _, _ = model_utils.accu_model_batch(
                     geo_model_input_dict,

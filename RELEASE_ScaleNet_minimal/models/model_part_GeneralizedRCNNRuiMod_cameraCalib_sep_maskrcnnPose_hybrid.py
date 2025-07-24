@@ -214,10 +214,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                     image_sizes_after_transform,
                 )
             ]
-            # NOTE: Why doesn't my predictions match the expected ones?
-            # NOTE: I need to set it to predictions to be able to split the softmax of person_h_logits?
-            # bbox_lengths = [len(bbox_list) for bbox_list in list_of_bbox_list]
-            bbox_lengths = [len(bbox_list) for bbox_list in predictions]
+            bbox_lengths = [len(bbox_list) for bbox_list in list_of_bbox_list]
             return_dict.update({"bbox_lengths": bbox_lengths})
 
             if self.if_roi_h_heads:

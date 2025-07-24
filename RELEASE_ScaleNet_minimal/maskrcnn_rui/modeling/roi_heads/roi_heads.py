@@ -193,7 +193,7 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             x, detections, loss_mask = self.mask(mask_features, detections, targets)
             losses.update(loss_mask)
 
-        if self.cfg.MODEL.KEYPOINT_ON:
+        if self.cfg.MODEL.KEYPOINT_ON and opt.est_kps:
             keypoint_features = features
             # optimization: during training, if we share the feature extractor between
             # the box and the mask heads, then we can reuse the features already computed

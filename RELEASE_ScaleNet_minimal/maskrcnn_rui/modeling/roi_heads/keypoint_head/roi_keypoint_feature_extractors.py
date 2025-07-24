@@ -1,16 +1,15 @@
-from torch import nn
-from torch.nn import functional as F
-
+from maskrcnn_benchmark.layers import Conv2d
 from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.poolers import Pooler
-
-from maskrcnn_benchmark.layers import Conv2d
+from maskrcnn_rui.modeling import registry as rui_registry
+from torch import nn
+from torch.nn import functional as F
 
 
 @registry.ROI_KEYPOINT_FEATURE_EXTRACTORS.register("KeypointRCNNFeatureExtractor")
 class KeypointRCNNFeatureExtractor(nn.Module):
     def __init__(self, cfg, in_channels):
-        super(KeypointRCNNFeatureExtractor, self).__init__()
+        super().__init__()
 
         resolution = cfg.MODEL.ROI_KEYPOINT_HEAD.POOLER_RESOLUTION
         scales = cfg.MODEL.ROI_KEYPOINT_HEAD.POOLER_SCALES
@@ -27,7 +26,7 @@ class KeypointRCNNFeatureExtractor(nn.Module):
         next_feature = input_features
         self.blocks = []
         for layer_idx, layer_features in enumerate(layers, 1):
-            layer_name = "conv_fcn{}".format(layer_idx)
+            layer_name = f"conv_fcn{layer_idx}"
             module = Conv2d(next_feature, layer_features, 3, stride=1, padding=1)
             nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity="relu")
             nn.init.constant_(module.bias, 0)
@@ -44,7 +43,12 @@ class KeypointRCNNFeatureExtractor(nn.Module):
 
 
 def make_roi_keypoint_feature_extractor(cfg, in_channels):
-    func = registry.ROI_KEYPOINT_FEATURE_EXTRACTORS[
-        cfg.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR
-    ]
+    if not cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
+        func = registry.ROI_KEYPOINT_FEATURE_EXTRACTORS[
+            cfg.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR
+        ]
+    else:
+        func = rui_registry.ROI_BOX_FEATURE_EXTRACTORS[
+            cfg.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR
+        ]
     return func(cfg, in_channels)

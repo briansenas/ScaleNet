@@ -51,21 +51,6 @@ class ROIKeypointHead(torch.nn.Module):
                 kaiming_init=kaiming_init,
             )
 
-            # # v2
-            # kaiming_init = False
-            # self.predictor_person_h_conv33 = make_conv3x3(self.feature_extractor.out_channels, 256, stride=2, use_relu=True, kaiming_init=kaiming_init)
-            # self.predictor_person_h_fc67 = make_fc(input_size, final_size, use_gn, kaiming_init=kaiming_init)
-            #
-            # # v3 + v2
-            # self.predictor_person_h_conv33_2 = make_conv3x3(256, 128, stride=2, use_relu=True, kaiming_init=kaiming_init)
-            # self.avgpool = nn.AdaptiveAvgPool2d(1)
-            # self.predictor_person_h_fc_justOne = make_fc(128*1*1, final_size, use_gn, kaiming_init=kaiming_init)
-
-            # # v4
-            # kaiming_init = False
-            # self.avgpool = nn.AdaptiveAvgPool2d(1)
-            # self.predictor_person_h_fc_justOne = make_fc(512, final_size, use_gn, kaiming_init=kaiming_init)
-
     def forward(
         self,
         features,
@@ -116,7 +101,10 @@ class ROIKeypointHead(torch.nn.Module):
                     proposals_valid,
                     targets_valid,
                 )
-        x = self.feature_extractor(features, proposals)
+        if not self.cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
+            x = self.feature_extractor(features, proposals)
+        else:
+            x = features
         kp_logits = self.predictor(x)
 
         output_kp = {}
