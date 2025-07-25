@@ -378,7 +378,8 @@ class RCNNOnly_combine(nn.Module):
                     raise ValueError("opt.discount_from must be in ('GT', 'pred')!")
 
         straighten_ratios_list = []
-        for image_idx, box_list_kps in enumerate(list_of_box_list_kps_gt_clone):
+        # NOTE: If we use the GT bboxes here we will fail to use the person_h_list later
+        for image_idx, box_list_kps in enumerate(output_RCNN["predictions"]):
             if self.opt.if_discount:
                 straighten_ratios = (
                     torch.tensor(where_to_cal_ratios[image_idx]).to(device).float()
@@ -962,11 +963,11 @@ class RCNNOnly_combine(nn.Module):
                     .to(self.opt.device)
                 )  # + 0. * preds_RCNN['person_h_list'][idx]
             else:
+                # NOTE: When fetch the first 2 bboxes as if they matched the GT?
                 h_human_s = (
-                    preds_RCNN["person_h_list"][idx]
-                    * preds_RCNN["straighten_ratios_list"][idx]
+                    preds_RCNN["person_h_list"][idx][:bboxes_length]
+                    * preds_RCNN["straighten_ratios_list"][idx][:bboxes_length]
                 )
-
             if if_detach:  # !!!!!!!
                 v0_est = v0_est.detach()
                 pitch_est = pitch_est.detach()
@@ -988,13 +989,10 @@ class RCNNOnly_combine(nn.Module):
                     camH_fit_list.append(camH_fit_bbox.detach().numpy())
                 camH_fit = np.median(np.array(camH_fit_list))
                 camH_fit_batch.append(camH_fit)
-
-            if if_fit_derek:
                 vt_error_sample_fit_list = []
+                bbox_fit_sample = []
 
             bbox_est_sample = []
-            if if_fit_derek:
-                bbox_fit_sample = []
             bbox_h_sample = []
             bbox_loss_sample = []
 
@@ -1017,7 +1015,6 @@ class RCNNOnly_combine(nn.Module):
                 )  # [top H bottom 0]
             else:
                 vt_camEst_batch = model_utils.approx_model(geo_model_input_dict)
-
             vt_loss_ori_batch = loss_func(vt_gt_batch, vt_camEst_batch) / bboxes[:, 3]
             vt_loss_ori_batch = torch.where(
                 torch.isnan(vt_loss_ori_batch),

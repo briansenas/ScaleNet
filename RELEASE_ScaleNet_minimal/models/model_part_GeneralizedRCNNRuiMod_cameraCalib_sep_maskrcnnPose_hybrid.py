@@ -215,6 +215,8 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
             if self.if_roi_h_heads:
                 if self.if_shared_kps_head:
                     class_logits = outputs_roi_bbox_heads["person_h_logits"]
+                    # NOTE: We won't be able to split on GT if we create logits on preds.
+                    bbox_lengths = [len(bbox_list) for bbox_list in predictions]
                 else:
                     roi_heads_output = self.roi_h_heads(features, list_of_bbox_list)
                     class_logits = roi_heads_output["class_logits"]

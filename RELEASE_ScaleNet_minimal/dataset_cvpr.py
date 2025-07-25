@@ -212,7 +212,7 @@ class SUN360Horizon:
             data = json.load(fhdl)
         im_path = self.data[k]
         im_ori_RGB = Image.open(im_path).convert("RGB")  # im_ori_RGB.size: [W, H]
-        assert "Narrower" in DS_ROOT or "DistWider20200403" in DS_ROOT
+        assert "Narrower" in DS_ROOT or "DistWider" in DS_ROOT
         data = data[0]
         pitch = data["pitch"]  # in radians
         roll = data["roll"]
