@@ -1,19 +1,17 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import datetime
 import logging
-import os
 import time
 
 import torch
 import torch.distributed as dist
-from tqdm import tqdm
-
-from maskrcnn_benchmark.data import make_data_loader
-from maskrcnn_benchmark.utils.comm import get_world_size, synchronize
-from maskrcnn_benchmark.utils.metric_logger import MetricLogger
-from maskrcnn_benchmark.engine.inference import inference
-
 from apex import amp
+from maskrcnn_benchmark.data import make_data_loader
+from maskrcnn_benchmark.engine.inference import inference
+from maskrcnn_benchmark.utils.comm import get_world_size
+from maskrcnn_benchmark.utils.comm import synchronize
+from maskrcnn_benchmark.utils.metric_logger import MetricLogger
+
 
 def reduce_loss_dict(loss_dict):
     """
@@ -21,7 +19,7 @@ def reduce_loss_dict(loss_dict):
     0 has the averaged results. Returns a dict with the same fields as
     loss_dict, after reduction.
     """
-    world_size = get_world_size() # NUM of GPUs
+    world_size = get_world_size()  # NUM of GPUs
     if world_size < 2:
         return loss_dict
     with torch.no_grad():
@@ -67,17 +65,19 @@ def do_train(
         iou_types = iou_types + ("segm",)
     if cfg.MODEL.KEYPOINT_ON:
         iou_types = iou_types + ("keypoints",)
-    dataset_names = cfg.DATASETS.TEST
 
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         if any(len(target) < 1 for target in targets):
-            logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in targets]}" )
+            logger.error(
+                f"Iteration={iteration + 1} || Image Ids used for training {_} "
+                + "|| targets Length={[len(target) for target in targets]}",
+            )
             continue
         data_time = time.time() - end
         iteration = iteration + 1
         arguments["iteration"] = iteration
 
-        images = images.to(device) # torch.Size([2, 3, 1216, 800]): PER GPU
+        images = images.to(device)  # torch.Size([2, 3, 1216, 800]): PER GPU
         targets = [target.to(device) for target in targets]
 
         loss_dict = model(images, targets)
@@ -113,25 +113,34 @@ def do_train(
                         "{meters}",
                         "lr: {lr:.6f}",
                         "max mem: {memory:.0f}",
-                    ]
+                    ],
                 ).format(
                     eta=eta_string,
                     iter=iteration,
                     meters=str(meters),
                     lr=optimizer.param_groups[0]["lr"],
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
-                )
+                ),
             )
         if iteration % checkpoint_period == 0:
-            checkpointer.save("model_{:07d}".format(iteration), **arguments)
-        if data_loader_val is not None and test_period > 0 and iteration % test_period == 0:
+            checkpointer.save(f"model_{iteration:07d}", **arguments)
+        if (
+            data_loader_val is not None
+            and test_period > 0
+            and iteration % test_period == 0
+        ):
             meters_val = MetricLogger(delimiter="  ")
             synchronize()
             _ = inference(  # The result can be used for additional logging, e. g. for TensorBoard
                 model,
                 # The method changes the segmentation mask format in a data loader,
                 # so every time a new data loader is created:
-                make_data_loader(cfg, is_train=False, is_distributed=(get_world_size() > 1), is_for_period=True),
+                make_data_loader(
+                    cfg,
+                    is_train=False,
+                    is_distributed=(get_world_size() > 1),
+                    is_for_period=True,
+                ),
                 dataset_name="[Validation]",
                 iou_types=iou_types,
                 box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
@@ -163,14 +172,14 @@ def do_train(
                         "{meters}",
                         "lr: {lr:.6f}",
                         "max mem: {memory:.0f}",
-                    ]
+                    ],
                 ).format(
                     eta=eta_string,
                     iter=iteration,
                     meters=str(meters_val),
                     lr=optimizer.param_groups[0]["lr"],
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
-                )
+                ),
             )
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
@@ -179,6 +188,7 @@ def do_train(
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
     logger.info(
         "Total training time: {} ({:.4f} s / it)".format(
-            total_time_str, total_training_time / (max_iter)
-        )
+            total_time_str,
+            total_training_time / (max_iter),
+        ),
     )

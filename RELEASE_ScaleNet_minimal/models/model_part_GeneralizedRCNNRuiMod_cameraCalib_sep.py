@@ -6,10 +6,10 @@ import torch.nn as nn
 from maskrcnn_benchmark.structures.image_list import to_image_list
 from maskrcnn_benchmark.utils.comm import get_rank
 from maskrcnn_rui.modeling.backbone import build_backbone
+from maskrcnn_rui.modeling.roi_heads.roi_heads import build_classifier_heads
+from maskrcnn_rui.modeling.roi_heads.roi_heads import build_roi_bbox_heads
+from maskrcnn_rui.modeling.roi_heads.roi_heads import build_roi_h_heads
 from maskrcnn_rui.modeling.rpn.rpn import build_rpn
-from maskrcnn_rui.roi_heads_rui.roi_heads import build_classifier_heads
-from maskrcnn_rui.roi_heads_rui.roi_heads import build_roi_bbox_heads
-from maskrcnn_rui.roi_heads_rui.roi_heads import build_roi_h_heads
 from torchvision.transforms import functional as F
 from utils.logger import printer
 from utils.model_utils import CATEGORIES
@@ -60,7 +60,8 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
 
         # self.if_camH_pointnet = 'camH_pointnet' not in modules_not_build and opt.pointnet_camH
         # if self.if_camH_pointnet:
-        #     self.camH_pointnet = CamHPointNet(in_channels=6, out_channels=cfg.MODEL.CLASSIFIER_HEADNUM_CLASSES.NUM_CLASSES)
+        #     self.camH_pointnet =
+        #          CamHPointNet(in_channels=6, out_channels=cfg.MODEL.CLASSIFIER_HEADNUM_CLASSES.NUM_CLASSES)
 
         self.cfg = cfg
         self.opt = opt
@@ -81,7 +82,8 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
             self.logger.setLevel(logging.INFO)
 
     def prepare_images(self, inputCOCO_Image_maskrcnnTransform_list):
-        # Transform so that the min size is no smaller than cfg.INPUT.MIN_SIZE_TRAIN, and the max size is no larger than cfg.INPUT.MIN_SIZE_TRAIN
+        # Transform so that the min size is no smaller than
+        # cfg.INPUT.MIN_SIZE_TRAIN, and the max size is no larger than cfg.INPUT.MIN_SIZE_TRAIN
         # image_batch = [self.transforms(original_image) for original_image in original_image_batch_list]
         image_batch = inputCOCO_Image_maskrcnnTransform_list
         image_sizes_after_transform = [
@@ -207,7 +209,7 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
             else:
                 # RPN-only models don't have roi_heads
                 x = features
-                result = proposals
+                _ = proposals
                 detector_losses = {}
 
             if self.training:
@@ -251,10 +253,6 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
     ):
         top_prediction_list = [
             self.select_top_predictions(prediction) for prediction in prediction_list
-        ]
-        top_prediction_list_ori = [
-            self.select_top_predictions(prediction)
-            for prediction in prediction_list_ori
         ]
 
         result_list = []

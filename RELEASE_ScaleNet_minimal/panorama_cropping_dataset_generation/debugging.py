@@ -155,7 +155,7 @@ def getHorizonLine(vfov, pitch):
 
 
 if __name__ == "__main__":
-    from hdrio import imread, imsave
+    from skimage.io import imread, imsave
     import matplotlib
 
     matplotlib.use("qt5agg")
@@ -174,6 +174,6 @@ if __name__ == "__main__":
         print(i)
         print(fp[i], pitch[i], roll[i], vfov[i])
 
-        im = imread(fp[i], "native")[:, :, :3]
+        im = imread(fp[i])[:, :, :3]
         imout = showHorizonLine(im, vfov[i], pitch[i], roll[i], debug=True)
         imsave(f"{i:03d}.png", imout)

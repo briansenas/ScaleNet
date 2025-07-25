@@ -1,15 +1,17 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+from maskrcnn_benchmark.modeling import registry
+from maskrcnn_benchmark.modeling.make_layers import make_conv3x3
+from maskrcnn_benchmark.modeling.poolers import Pooler
+from maskrcnn_rui.modeling import registry as rui_registry
 from torch import nn
 from torch.nn import functional as F
 
 from ..box_head.roi_box_feature_extractors import ResNet50Conv5ROIFeatureExtractor
-from maskrcnn_benchmark.modeling import registry
-from maskrcnn_benchmark.modeling.poolers import Pooler
-from maskrcnn_benchmark.modeling.make_layers import make_conv3x3
 
 
 registry.ROI_MASK_FEATURE_EXTRACTORS.register(
-    "ResNet50Conv5ROIFeatureExtractor", ResNet50Conv5ROIFeatureExtractor
+    "ResNet50Conv5ROIFeatureExtractor",
+    ResNet50Conv5ROIFeatureExtractor,
 )
 
 
@@ -26,7 +28,7 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
             input_size (int): number of channels of the input once it's flattened
             representation_size (int): size of the intermediate representation
         """
-        super(MaskRCNNFPNFeatureExtractor, self).__init__()
+        super().__init__()
 
         resolution = cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION
         scales = cfg.MODEL.ROI_MASK_HEAD.POOLER_SCALES
@@ -46,10 +48,13 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
         next_feature = input_size
         self.blocks = []
         for layer_idx, layer_features in enumerate(layers, 1):
-            layer_name = "mask_fcn{}".format(layer_idx)
+            layer_name = f"mask_fcn{layer_idx}"
             module = make_conv3x3(
-                next_feature, layer_features,
-                dilation=dilation, stride=1, use_gn=use_gn
+                next_feature,
+                layer_features,
+                dilation=dilation,
+                stride=1,
+                use_gn=use_gn,
             )
             self.add_module(layer_name, module)
             next_feature = layer_features
@@ -66,7 +71,12 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
 
 
 def make_roi_mask_feature_extractor(cfg, in_channels):
-    func = registry.ROI_MASK_FEATURE_EXTRACTORS[
-        cfg.MODEL.ROI_MASK_HEAD.FEATURE_EXTRACTOR
-    ]
+    if not cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
+        func = registry.ROI_MASK_FEATURE_EXTRACTORS[
+            cfg.MODEL.ROI_MASK_HEAD.FEATURE_EXTRACTOR
+        ]
+    else:
+        func = rui_registry.ROI_BOX_FEATURE_EXTRACTORS[
+            cfg.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR
+        ]
     return func(cfg, in_channels)

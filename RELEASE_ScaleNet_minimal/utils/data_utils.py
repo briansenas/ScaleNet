@@ -129,7 +129,7 @@ def make_data_loader(
     )
     logger.info(
         (
-            "++++++[train_utils] len(dataset) %d, len(sampler) %d, len(batch_sampler) %d"
+            "++++++[train_utils] len(dataset) %d, len(sampler) %d, len(batch_sampler) %d "
             + "len(data_loader) %d, is_train %s, is_distributed %s:"
         )
         % (

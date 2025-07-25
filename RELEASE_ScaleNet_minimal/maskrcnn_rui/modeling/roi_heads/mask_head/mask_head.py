@@ -1,13 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
-from torch import nn
-
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
-from .roi_mask_feature_extractors import make_roi_mask_feature_extractor
-from .roi_mask_predictors import make_roi_mask_predictor
 from .inference import make_roi_mask_post_processor
 from .loss import make_roi_mask_loss_evaluator
+from .roi_mask_feature_extractors import make_roi_mask_feature_extractor
+from .roi_mask_predictors import make_roi_mask_predictor
 
 
 def keep_only_positive_boxes(boxes):
@@ -23,11 +21,10 @@ def keep_only_positive_boxes(boxes):
     assert boxes[0].has_field("labels")
     positive_boxes = []
     positive_inds = []
-    num_boxes = 0
     for boxes_per_image in boxes:
         labels = boxes_per_image.get_field("labels")
         inds_mask = labels > 0
-        inds = inds_mask.nonzero().squeeze(1)
+        inds = inds_mask.nonzero(as_tuple=False).squeeze(1)
         positive_boxes.append(boxes_per_image[inds])
         positive_inds.append(inds_mask)
     return positive_boxes, positive_inds
@@ -35,11 +32,13 @@ def keep_only_positive_boxes(boxes):
 
 class ROIMaskHead(torch.nn.Module):
     def __init__(self, cfg, in_channels):
-        super(ROIMaskHead, self).__init__()
+        super().__init__()
         self.cfg = cfg.clone()
         self.feature_extractor = make_roi_mask_feature_extractor(cfg, in_channels)
         self.predictor = make_roi_mask_predictor(
-            cfg, self.feature_extractor.out_channels)
+            cfg,
+            self.feature_extractor.out_channels,
+        )
         self.post_processor = make_roi_mask_post_processor(cfg)
         self.loss_evaluator = make_roi_mask_loss_evaluator(cfg)
 

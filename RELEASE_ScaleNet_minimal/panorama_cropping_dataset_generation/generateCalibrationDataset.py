@@ -1,29 +1,25 @@
+import argparse
 import json
 import os
 import random
 from glob import glob
 from multiprocessing import Pool
 
-import image_extraction
 import numpy as np
-from debugging import showHorizonLine
-from hdrio import imread
-from helpers import DispDebug
-from imageio import imsave
+import panorama_cropping_dataset_generation.image_extraction as image_extraction
+from panorama_cropping_dataset_generation.debugging import showHorizonLine
+from panorama_cropping_dataset_generation.helpers import DispDebug
 from PIL import Image
 from scipy.stats import cauchy
 from scipy.stats import lognorm
+from skimage.io import imread
+from skimage.io import imsave
 from tqdm import tqdm
 
 
 DEBUG = False
 DISPLAY = False
 
-input_dir = "data/SUN360/train/RGB/"
-output_dir = "data/crops_dataset_cvpr_myDistWider20200403"
-
-os.makedirs(output_dir, exist_ok=True)
-os.makedirs(os.path.join(output_dir, "debug"), exist_ok=True)
 
 aspect_ratios, ar_probabilities = zip(
     *(
@@ -227,7 +223,7 @@ def process(im_path):
     if os.path.isfile(metadata_path):
         return
 
-    im = imread(im_path, "native")
+    im = imread(im_path)
     if len(im.shape) == 2:
         im = np.stack((im,) * 3, axis=-1)
     else:
@@ -245,11 +241,24 @@ def process(im_path):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--input_dir",
+        type=str,
+        default="data/SUN360/train/RGB",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="data/SUN360/train_crops_dataset_cvpr_myDistWider",
+    )
+    args = parser.parse_args()
+    input_dir = args.input_dir
+    output_dir = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "debug"), exist_ok=True)
     with DispDebug("Listing SUN360..."):
-        # images = glob("/newfoundland/data_extra/SUN360/pano9104x4552/**/*.jpg", recursive=True)
         images = glob(input_dir + "/**/*.jpg", recursive=True)
-
-    import random
 
     random.seed(31415926)
     random.shuffle(images)

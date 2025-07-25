@@ -1,19 +1,18 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
-from torch import nn
-from torch.nn import functional as F
-
 from maskrcnn_rui.modeling import registry
 from maskrcnn_rui.modeling.backbone import resnet
-from maskrcnn_rui.modeling.poolers import Pooler
 from maskrcnn_rui.modeling.make_layers import group_norm
 from maskrcnn_rui.modeling.make_layers import make_fc
+from maskrcnn_rui.modeling.poolers import Pooler
+from torch import nn
+from torch.nn import functional as F
 
 
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("ResNet50Conv5ROIFeatureExtractor")
 class ResNet50Conv5ROIFeatureExtractor(nn.Module):
     def __init__(self, config, in_channels):
-        super(ResNet50Conv5ROIFeatureExtractor, self).__init__()
+        super().__init__()
 
         resolution = config.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
         scales = config.MODEL.ROI_BOX_HEAD.POOLER_SCALES
@@ -33,7 +32,7 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
             stride_in_1x1=config.MODEL.RESNETS.STRIDE_IN_1X1,
             stride_init=None,
             res2_out_channels=config.MODEL.RESNETS.RES2_OUT_CHANNELS,
-            dilation=config.MODEL.RESNETS.RES5_DILATION
+            dilation=config.MODEL.RESNETS.RES5_DILATION,
         )
 
         self.pooler = pooler
@@ -53,7 +52,7 @@ class FPN2MLPFeatureExtractor(nn.Module):
     """
 
     def __init__(self, cfg, in_channels):
-        super(FPN2MLPFeatureExtractor, self).__init__()
+        super().__init__()
 
         resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
         scales = cfg.MODEL.ROI_BOX_HEAD.POOLER_SCALES
@@ -63,7 +62,7 @@ class FPN2MLPFeatureExtractor(nn.Module):
             scales=scales,
             sampling_ratio=sampling_ratio,
         )
-        input_size = in_channels * resolution ** 2
+        input_size = in_channels * resolution**2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
         use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
         self.pooler = pooler
@@ -88,7 +87,7 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
     """
 
     def __init__(self, cfg, in_channels):
-        super(FPNXconv1fcFeatureExtractor, self).__init__()
+        super().__init__()
 
         resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
         scales = cfg.MODEL.ROI_BOX_HEAD.POOLER_SCALES
@@ -115,8 +114,8 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
                     stride=1,
                     padding=dilation,
                     dilation=dilation,
-                    bias=False if use_gn else True
-                )
+                    bias=False if use_gn else True,
+                ),
             )
             in_channels = conv_head_dim
             if use_gn:
@@ -124,14 +123,14 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
             xconvs.append(nn.ReLU(inplace=True))
 
         self.add_module("xconvs", nn.Sequential(*xconvs))
-        for modules in [self.xconvs,]:
+        for modules in [self.xconvs]:
             for l in modules.modules():
                 if isinstance(l, nn.Conv2d):
                     torch.nn.init.normal_(l.weight, std=0.01)
                     if not use_gn:
                         torch.nn.init.constant_(l.bias, 0)
 
-        input_size = conv_head_dim * resolution ** 2
+        input_size = conv_head_dim * resolution**2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
         self.fc6 = make_fc(input_size, representation_size, use_gn=False)
         self.out_channels = representation_size
@@ -145,7 +144,12 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
 
 
 def make_roi_box_feature_extractor(cfg, in_channels):
-    func = registry.ROI_BOX_FEATURE_EXTRACTORS[
-        cfg.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR
+    func = registry.ROI_BOX_FEATURE_EXTRACTORS[cfg.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR]
+    return func(cfg, in_channels)
+
+
+def make_classifier_feature_extractor(cfg, in_channels):
+    func = registry.CLASSIFIER_FEATURE_EXTRACTORS[
+        cfg.MODEL.CLASSIFIER_HEAD.FEATURE_EXTRACTOR
     ]
     return func(cfg, in_channels)

@@ -47,13 +47,13 @@ MODEL:
     N_PAD_TO: 10
     PATH: "models/pointnet"
   LOSS:
-    VT_LOSS_CLAMP: 5.
+    VT_LOSS_CLAMP: 2.
 DATALOADER:
   SIZE_DIVISIBILITY: 0
   NUM_WORKERS: 4
 DATA:
   COCO:
-    GOOD_NUM: 10
+    GOOD_NUM: 50
 SOLVER:
   BASE_LR: 1e-5
   WARMUP_FACTOR: 0.1
@@ -61,7 +61,7 @@ SOLVER:
   WARMUP_METHOD: "linear"
   WEIGHT_DECAY: 0.0001
   STEPS: (60000, 80000)
-  MAX_ITER: null
+  MAX_ITER: 90000
   IMS_PER_BATCH: 8 # should be divisible by the number of GPUs
   PERSON_WEIGHT: 0.01
 TEST:

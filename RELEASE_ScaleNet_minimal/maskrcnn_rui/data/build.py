@@ -10,8 +10,8 @@ from maskrcnn_benchmark.utils.miscellaneous import save_labels
 
 from . import datasets as D
 from . import samplers
-
-from .collate_batch import BatchCollator, BBoxAugCollator
+from .collate_batch import BatchCollator
+from .collate_batch import BBoxAugCollator
 from .transforms import build_transforms_maskrcnn as build_transforms
 
 
@@ -27,7 +27,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
     """
     if not isinstance(dataset_list, (list, tuple)):
         raise RuntimeError(
-            "dataset_list should be a list of strings, got {}".format(dataset_list)
+            f"dataset_list should be a list of strings, got {dataset_list}",
         )
     datasets = []
     for dataset_name in dataset_list:
@@ -61,12 +61,7 @@ def make_data_sampler(dataset, shuffle, distributed):
     if distributed:
         return samplers.DistributedSampler(dataset, shuffle=shuffle)
     if shuffle:
-        # import random
-        # random.seed(123453)
         sampler = torch.utils.data.sampler.RandomSampler(dataset)
-        # samples_weight = torch.ones(len(dataset))
-        # print('++++++++RandomSampler')
-        # sampler = torch.utils.data.sampler.WeightedRandomSampler(samples_weight, len(samples_weight))
     else:
         sampler = torch.utils.data.sampler.SequentialSampler(dataset)
     return sampler
@@ -89,7 +84,12 @@ def _compute_aspect_ratios(dataset):
 
 
 def make_batch_data_sampler(
-    dataset, sampler, aspect_grouping, images_per_batch, num_iters=None, start_iter=0
+    dataset,
+    sampler,
+    aspect_grouping,
+    images_per_batch,
+    num_iters=None,
+    start_iter=0,
 ):
     if aspect_grouping:
         if not isinstance(aspect_grouping, (list, tuple)):
@@ -97,27 +97,42 @@ def make_batch_data_sampler(
         aspect_ratios = _compute_aspect_ratios(dataset)
         group_ids = _quantize(aspect_ratios, aspect_grouping)
         batch_sampler = samplers.GroupedBatchSampler(
-            sampler, group_ids, images_per_batch, drop_uneven=False
+            sampler,
+            group_ids,
+            images_per_batch,
+            drop_uneven=False,
         )
     else:
         batch_sampler = torch.utils.data.sampler.BatchSampler(
-            sampler, images_per_batch, drop_last=False
+            sampler,
+            images_per_batch,
+            drop_last=False,
         )
     if num_iters is not None:
         batch_sampler = samplers.IterationBasedBatchSampler(
-            batch_sampler, num_iters, start_iter
+            batch_sampler,
+            num_iters,
+            start_iter,
         )
     return batch_sampler
 
 
-def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_for_period=False):
+def make_data_loader(
+    cfg,
+    is_train=True,
+    is_distributed=False,
+    start_iter=0,
+    is_for_period=False,
+):
     num_gpus = get_world_size()
     if is_train:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
         assert (
             images_per_batch % num_gpus == 0
         ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
-            images_per_batch, num_gpus)
+            images_per_batch,
+            num_gpus,
+        )
         images_per_gpu = images_per_batch // num_gpus
         shuffle = True
         num_iters = cfg.SOLVER.MAX_ITER
@@ -126,7 +141,9 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
         assert (
             images_per_batch % num_gpus == 0
         ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
-            images_per_batch, num_gpus)
+            images_per_batch,
+            num_gpus,
+        )
         images_per_gpu = images_per_batch // num_gpus
         shuffle = False if not is_distributed else True
         num_iters = None
@@ -142,7 +159,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
             "TEST.IMS_PER_BATCH (for inference). For training, you must "
             "also adjust the learning rate and schedule length according "
             "to the linear scaling rule. See for example: "
-            "https://github.com/facebookresearch/Detectron/blob/master/configs/getting_started/tutorial_1gpu_e2e_faster_rcnn_R-50-FPN.yaml#L14"
+            "https://github.com/facebookresearch/Detectron/blob/master/configs/getting_started/tutorial_1gpu_e2e_faster_rcnn_R-50-FPN.yaml#L14",
         )
 
     # group images which have similar aspect ratio. In this case, we only
@@ -151,14 +168,25 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
     aspect_grouping = [1] if cfg.DATALOADER.ASPECT_RATIO_GROUPING else []
 
     paths_catalog = import_file(
-        "maskrcnn_benchmark.config.paths_catalog", cfg.PATHS_CATALOG, True
+        "maskrcnn_benchmark.config.paths_catalog",
+        cfg.PATHS_CATALOG,
+        True,
     )
     DatasetCatalog = paths_catalog.DatasetCatalog
     dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
 
     # If bbox aug is enabled in testing, simply set transforms to None and we will apply transforms later
-    transforms = None if not is_train and cfg.TEST.BBOX_AUG.ENABLED else build_transforms(cfg, is_train)
-    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train or is_for_period)
+    transforms = (
+        None
+        if not is_train and cfg.TEST.BBOX_AUG.ENABLED
+        else build_transforms(cfg, is_train)
+    )
+    datasets = build_dataset(
+        dataset_list,
+        transforms,
+        DatasetCatalog,
+        is_train or is_for_period,
+    )
 
     if is_train:
         # save category_id to label name mapping
@@ -168,10 +196,18 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
     for dataset in datasets:
         sampler = make_data_sampler(dataset, shuffle, is_distributed)
         batch_sampler = make_batch_data_sampler(
-            dataset, sampler, aspect_grouping, images_per_gpu, num_iters, start_iter
+            dataset,
+            sampler,
+            aspect_grouping,
+            images_per_gpu,
+            num_iters,
+            start_iter,
         )
-        collator = BBoxAugCollator() if not is_train and cfg.TEST.BBOX_AUG.ENABLED else \
-            BatchCollator(cfg.DATALOADER.SIZE_DIVISIBILITY)
+        collator = (
+            BBoxAugCollator()
+            if not is_train and cfg.TEST.BBOX_AUG.ENABLED
+            else BatchCollator(cfg.DATALOADER.SIZE_DIVISIBILITY)
+        )
         num_workers = cfg.DATALOADER.NUM_WORKERS
         data_loader = torch.utils.data.DataLoader(
             dataset,

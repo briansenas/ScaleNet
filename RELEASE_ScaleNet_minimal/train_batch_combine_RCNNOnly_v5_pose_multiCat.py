@@ -132,9 +132,7 @@ def train_batch_combine(
             f_mm_array_est = f_pixels_to_mm(f_pixels_yannick_batch_est, input_dict)
 
         if opt.pointnet_camH:
-            # output_yc_batch = output_RCNN["output_yc_batch"]
             yc_est_batch = output_RCNN["yc_est_batch"]
-            # yc_est_batch_list = output_RCNN['yc_est_batch_list']
             return_dict.update(
                 {
                     "yc_est_batch": yc_est_batch,
@@ -210,7 +208,7 @@ def train_batch_combine(
     # ========= Yannick's inputs
     if opt.train_cameraCls and if_SUN360:
         inputSUN360_Image_maskrcnnTransform_list = input_dict[
-            "inputSUN360_Image_maskrcnnTransform_list"
+            "inputSUN360_Image_yannickTransform_list"
         ]
         horizon_dist_gt = input_dict["horizon_dist_gt"].to(device)
         pitch_dist_gt = input_dict["pitch_dist_gt"].to(device)
