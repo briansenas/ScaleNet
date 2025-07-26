@@ -378,8 +378,14 @@ class RCNNOnly_combine(nn.Module):
                     raise ValueError("opt.discount_from must be in ('GT', 'pred')!")
 
         straighten_ratios_list = []
-        # NOTE: If we use the GT bboxes here we will fail to use the person_h_list later
-        for image_idx, box_list_kps in enumerate(output_RCNN["predictions"]):
+        # NOTE: If we use the GT bboxes here we will fail to use the person_h_list later when est_kps?
+        for image_idx, box_list_kps in enumerate(
+            (
+                list_of_box_list_kps_gt_clone
+                if not self.opt.est_kps
+                else output_RCNN["predictions"]
+            ),
+        ):
             if self.opt.if_discount:
                 straighten_ratios = (
                     torch.tensor(where_to_cal_ratios[image_idx]).to(device).float()
@@ -642,7 +648,6 @@ class RCNNOnly_combine(nn.Module):
                             person_h_padded_input,
                         ]
 
-                    # if not(layer_idx+1 == self.num_layers-1 and self.opt.loss_last_layer):
                     if not self.opt.not_pointnet_detach_input:
                         input_list2 = [input.detach() for input in input_list2]
 
@@ -946,6 +951,8 @@ class RCNNOnly_combine(nn.Module):
         loss_func = torch.nn.L1Loss(reduction="none")
 
         for idx, bboxes_length in enumerate(input_dict["bboxes_length_batch_array"]):
+            # NOTE: Only process the same amount of bboxes that we were able to predict?
+            bboxes_length = min(bboxes_length, len(preds_RCNN["person_h_list"][idx]))
             bboxes = input_dict_misc["bboxes_batch"][idx][:bboxes_length]  # [N, 4]
             H = input_dict_misc["H_batch"][idx]
             vc = H / 2.0

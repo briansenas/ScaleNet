@@ -128,24 +128,12 @@ class RCNN_only(nn.Module):
         if im_filename is not None and self.if_print:
             print("in model: im_filename", colored(im_filename, "white", "on_red"))
 
-        # # print(images224.shape)
-        # output_Densenet = self.forward_densenet(images224)
-        # if self.if_print:
-        #     print('in model: images224', colored(images224.shape, 'yellow', 'on_red'))
-        #     print('in model: output_Densenet[0]', colored(output_Densenet[0].shape, 'yellow', 'on_red'))
-        # # return output_Densenet
-
         if image_batch_list is not None:
             output_RCNN = self.RCNN(
                 image_batch_list,
                 list_of_bbox_list_cpu,
                 list_of_oneLargeBbox_list,
             )
-            # prediction_list, prediction_list_ori = self.RCNN.post_process(output_RCNN['predictions'], image_batch_list)
-            # result_list, top_prediction_list = self.RCNN.select_and_vis_bbox(prediction_list, prediction_list_ori, image_batch_list)
-            # output_RCNN.update({'result_list': result_list, 'top_predictions': [proposal.bbox.detach().cpu().numpy() for proposal in top_prediction_list]})
-            # if self.if_print:
-            #     print('in model', colored(output_RCNN['class_logits_softmax'].shape, 'yellow', 'on_red'))
             return output_RCNN
         else:
             return None

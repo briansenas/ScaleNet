@@ -26,7 +26,6 @@ class KeypointPostProcessor(nn.Module):
             prob.add_field("logits", score)
             bbox.add_field("keypoints", prob)
             results.append(bbox)
-
         return results
 
 
