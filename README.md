@@ -84,8 +84,12 @@ This network is trained on SUN360 dataset with supervision of some camera parame
 - focal length
 
 Note that geometric relationships exist between those items. Specifically:
-- $f_{pix} = \frac{h/2}{np.tan(vfov / 2.)}$, where $f_{pix}$ is the focal length in pixels, h is the image height in pixels.
-- $f_{mm} = \frac{f_{pix}}{h * s_s}$, which converts the $f_{pix}$ to focal length in 35mm equivalent frame (e.g. images taken by full-frame sensors) using the sensor's size $s_s$.
+```math
+f_{pix} = \frac{h/2}{np.tan(vfov / 2.)}\;\textrm{, where}\; f_{pix}\;\textrm{is the focal length in pixels, h is the image height in pixels.}
+```
+```math
+f_{mm} = \frac{f_{pix}}{h * s_s}\;\textrm{, which converts the}\; f_{pix}\; \textrm{to focal length in 35mm equivalent frame using the sensor's size}\; s_s\textrm{.}
+```
 
 # Scale Estimation Inference on COCOScale
 ## Preparation
