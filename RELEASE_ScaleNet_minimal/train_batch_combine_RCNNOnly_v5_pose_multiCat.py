@@ -41,7 +41,6 @@ def train_batch_combine(
         torch.from_numpy(input_dict["H_batch_array"]).to(device),
         input_dict["yc_batch"].to(device),
     )
-
     list_of_bbox_list_cpu = model_utils.bboxArray_to_bboxList(
         bboxes_batch,
         input_dict["bboxes_length_batch_array"],
@@ -329,7 +328,6 @@ def train_batch_combine(
                     W_nps,
                 )
             ]
-            # input_dict_show.update({'yc_fit': yc_batch_offline.detach().cpu().numpy(), 'yc_est': yc_est_batch.detach().cpu().numpy()})
 
             if (
                 len(output_RCNN["f_pixels_est_batch_np_list"]) > 1

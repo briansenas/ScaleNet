@@ -106,7 +106,6 @@ class ROIKeypointHead(torch.nn.Module):
         else:
             x = features
         kp_logits = self.predictor(x)
-
         output_kp = {}
         if self.if_roi_h_heads and (not if_notNMS_yet):
             # v1

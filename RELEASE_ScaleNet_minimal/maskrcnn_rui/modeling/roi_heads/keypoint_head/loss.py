@@ -159,7 +159,7 @@ class KeypointRCNNLossComputation:
             targets (list[BoxList])
         """
 
-        labels, keypoints = self.prepare_targets(proposals, targets)
+        labels, keypoints = self.prepare_targets(proposals, targets, if_debug=False)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
 
         proposals = list(proposals)

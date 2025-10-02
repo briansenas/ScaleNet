@@ -3,9 +3,9 @@
 MODEL:
   NAME: 'RCNN-kps'
   META_ARCHITECTURE: "GeneralizedRCNNRui"
-  RCNN_WEIGHT_BACKBONE: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+  RCNN_WEIGHT_BACKBONE: "checkpoint/checkpointer_epoch0055_iter0136785.pth"
   RCNN_WEIGHT_BOX_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-  RCNN_WEIGHT_CLS_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+  RCNN_WEIGHT_CLS_HEAD: "checkpoint/checkpointer_epoch0055_iter0136785.pth"
 
   BACKBONE:
     CONV_BODY: FBNet

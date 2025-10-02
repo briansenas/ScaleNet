@@ -381,7 +381,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
         for region in kps:
             image = vis_keypoints(
                 image,
-                region.transpose((1, 0)),
+                region.transpose((1, 0)).astype(int),
                 if_fake_scores=if_fake_scores,
             )
         return image
@@ -430,7 +430,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
 
         template = "{}: {:.2f}"
         for box, score, label in zip(boxes, scores, labels):
-            x, y = box[:2]
+            x, y = box[:2].detach().cpu().numpy().astype(int)
             s = template.format(label, score)
             cv2.putText(
                 image,
@@ -601,17 +601,23 @@ def vis_keypoints(
 
     # Draw mid shoulder / mid hip first for better visualization.
     mid_shoulder = (
-        kps[:2, dataset_keypoints.index("right_shoulder")]
-        + kps[:2, dataset_keypoints.index("left_shoulder")]
-    ) / 2.0
+        (
+            kps[:2, dataset_keypoints.index("right_shoulder")]
+            + kps[:2, dataset_keypoints.index("left_shoulder")]
+        )
+        / 2.0
+    ).astype(int)
     sc_mid_shoulder = np.minimum(
         kps[2, dataset_keypoints.index("right_shoulder")],
         kps[2, dataset_keypoints.index("left_shoulder")],
     )
     mid_hip = (
-        kps[:2, dataset_keypoints.index("right_hip")]
-        + kps[:2, dataset_keypoints.index("left_hip")]
-    ) / 2.0
+        (
+            kps[:2, dataset_keypoints.index("right_hip")]
+            + kps[:2, dataset_keypoints.index("left_hip")]
+        )
+        / 2.0
+    ).astype(int)
     sc_mid_hip = np.minimum(
         kps[2, dataset_keypoints.index("right_hip")],
         kps[2, dataset_keypoints.index("left_hip")],

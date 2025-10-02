@@ -354,7 +354,6 @@ class RCNNOnly_combine(nn.Module):
             targets=list_of_box_list_kps_gt_clone,
             input_data=input_dict_misc["data"],
         )
-
         # if input_dict_misc is not None:
         if input_dict_misc["data"] not in ["coco", "IMDB-23K"]:
             return output_RCNN
@@ -522,7 +521,7 @@ class RCNNOnly_combine(nn.Module):
                 or self.opt.pointnet_roi_feat_input_person3
             ):
                 roi_feats = preds_RCNN[
-                    "roi_feats"
+                    "x"
                 ]  # L37, maskrcnn_rui/roi_heads_rui/box_head/roi_box_predictors.py
                 roi_feats_list = roi_feats.split(output_RCNN["bbox_lengths"])
                 roi_feats_padded_input = list_of_tensor_to_tensor_padded(
@@ -541,7 +540,7 @@ class RCNNOnly_combine(nn.Module):
                 input_dict_misc["bins"]["yc_bins_lowHigh_list"][0],
                 preds_RCNN["reduce_method"],
                 direct=self.opt.direct_camH,
-                debug=False,
+                debug=self.opt.debug,
             )
             preds_RCNN.update(
                 {"yc_est_batch": yc_est_batch, "output_yc_batch": camH_cls_logits},
@@ -752,7 +751,7 @@ class RCNNOnly_combine(nn.Module):
                             ],
                             reduce_method,
                             direct=self.opt.direct_v0,
-                            debug=False,
+                            debug=self.opt.debug,
                         )
                         # (H = top of the image, 0 = bottom of the image)
                         v0_est_batch_delta_H0 = (
@@ -952,6 +951,15 @@ class RCNNOnly_combine(nn.Module):
 
         for idx, bboxes_length in enumerate(input_dict["bboxes_length_batch_array"]):
             # NOTE: Only process the same amount of bboxes that we were able to predict?
+            if bboxes_length != len(preds_RCNN["person_h_list"][idx]):
+                print(
+                    colored(
+                        "---- Total bboxes does not match "
+                        f'{bboxes_length} {len(preds_RCNN["person_h_list"][idx])}',
+                        "yellow",
+                        "on_red",
+                    ),
+                )
             bboxes_length = min(bboxes_length, len(preds_RCNN["person_h_list"][idx]))
             bboxes = input_dict_misc["bboxes_batch"][idx][:bboxes_length]  # [N, 4]
             H = input_dict_misc["H_batch"][idx]
@@ -1018,7 +1026,7 @@ class RCNNOnly_combine(nn.Module):
             if self.opt.accu_model:
                 vt_camEst_batch, _, _ = model_utils.accu_model_batch(
                     geo_model_input_dict,
-                    if_debug=False,
+                    if_debug=self.opt.debug,
                 )  # [top H bottom 0]
             else:
                 vt_camEst_batch = model_utils.approx_model(geo_model_input_dict)
@@ -1350,7 +1358,7 @@ class RCNNOnly_combine(nn.Module):
             )
 
         if self.opt.pointnet_roi_feat_input or self.opt.pointnet_roi_feat_input_person3:
-            predictions.update({"roi_feats": output_RCNN["roi_feats"]})
+            predictions.update({"roi_feats": output_RCNN["x"]})
 
         return predictions
 

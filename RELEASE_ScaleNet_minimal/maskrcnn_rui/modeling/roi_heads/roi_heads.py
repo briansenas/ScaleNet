@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+from torchvision.ops import box_iou
 
 from .box_head.box_head import build_roi_box_head
 from .box_head.box_head import build_roi_box_head_rui
@@ -109,7 +110,7 @@ def build_classifier_heads(cfg, opt, in_channels):
         ),
     )
     if not opt.pointnet_camH:
-        if opt.direct_h:
+        if opt.direct_camH:
             roi_heads.append(
                 (
                     "classifier_camH",
@@ -210,6 +211,13 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                     target_idxes_with_valid_kps_list=target_idxes_with_valid_kps_list,
                     if_notNMS_yet=True,
                 )
+                # NOTE: Attempt to align predictions with GT for further predictions
+                for i, (pred, gt) in enumerate(zip(detections_nms, targets)):
+                    if len(pred.bbox) == 0 or len(gt.bbox) == 0:
+                        continue
+                    iou = box_iou(gt.bbox, pred.bbox)  # [N_gt, N_pred]
+                    _, best_pred_idx = iou.max(dim=1)
+                    detections_nms[i] = pred[best_pred_idx]
                 _, _, detections_nms, _, output_kp = self.keypoint(
                     keypoint_features,
                     detections_nms,

@@ -260,23 +260,15 @@ def check_save(
     epoch_total,
     opt,
     checkpointer,
-    epochs_saved,
     checkpoints_folder,
     logger=None,
     is_better=False,
 ):
     arguments = {"iteration": tid, "epoch": epoch_total}
-    if (
-        rank == 0
-        and (
-            epoch_save < opt.save_every_epoch
-            or epoch_save % opt.save_every_epoch == 0
-            or (
-                tid != 0
-                and (opt.save_every_iter != 0 and tid % opt.save_every_iter == 0)
-            )
-        )
-        and epoch_save not in epochs_saved
+    if rank == 0 and (
+        epoch_save < opt.save_every_epoch
+        or epoch_save % opt.save_every_epoch == 0
+        or (tid != 0 and (opt.save_every_iter != 0 and tid % opt.save_every_iter == 0))
     ):
 
         saved_filename = checkpointer.save(
@@ -289,8 +281,6 @@ def check_save(
             start_with="checkpointer_",
             logger=logger,
         )
-
-        epochs_saved.append(epoch_save)
 
     if rank == 0 and is_better:
         ckpt_filepath = "best_checkpointer_epoch%04d_iter%07d" % (epoch_total, tid)
