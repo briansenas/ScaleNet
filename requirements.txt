@@ -1,9 +1,6 @@
 -f https://download.pytorch.org/whl/torch_stable.html
-cityscapesscripts
-jupyterlab
 opencv-python
 Pillow==6.1
-pycocotools
 scikit-image
 tensorboard
 tensorboardX
