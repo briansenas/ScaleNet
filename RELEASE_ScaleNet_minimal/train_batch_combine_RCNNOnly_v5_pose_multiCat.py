@@ -87,7 +87,13 @@ def train_batch_combine(
     )
     loss_dict = {}
     return_dict = {}
-
+    # print(output_RCNN.keys())
+    # For DDP we need to include this losses since find_unused_parameters is not working properly
+    # if "loss_objectness" in output_RCNN:
+    #     loss_dict.update({
+    #         "loss_objectness": output_RCNN["loss_objectness"], 
+    #         "loss_rpn_box_reg": output_RCNN["loss_rpn_box_reg"]
+    #     })
     if opt.est_kps:
         loss_dict.update(
             {"loss_kp": output_RCNN["detector_losses"]["loss_kp"] * opt.weight_kps},
@@ -203,7 +209,6 @@ def train_batch_combine(
                 else:
                     # ONLY LAST layer;; for optimization and scheduler
                     loss_dict.update({"loss_person": loss_all_person_h_list[-1]})
-
     # ========= Yannick's inputs
     if opt.train_cameraCls and if_SUN360:
         inputSUN360_Image_maskrcnnTransform_list = input_dict[

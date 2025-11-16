@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.nn.parallel import DataParallel as DP
 import torch.optim as optim
 from dataset_coco_pickle_eccv import COCO2017ECCV
 from dataset_coco_pickle_eccv import my_collate
@@ -49,9 +49,8 @@ def train(rank, opt):
     opt.device = device
     opt.local_rank = rank
     opt.rank = rank
-    world_size    = int(os.environ["WORLD_SIZE"])
-    dist.init_process_group("nccl", rank=rank, world_size=world_size, timeout=datetime.timedelta(seconds=30))
-    if rank == 0: print(f"Group initialized? {dist.is_initialized()}", flush=True)
+    # dist.init_process_group("nccl", rank=rank, world_size=world_size, timeout=datetime.timedelta(seconds=30))
+    # if rank == 0: print(f"Group initialized? {dist.is_initialized()}", flush=True)
     torch.cuda.set_device(rank)
 
     summary_path = "./summary/" + opt.task_name
@@ -95,7 +94,7 @@ def train(rank, opt):
     model.to(rank)
     model.init_restore()
     model.turn_on_all_params()
-    model = DDP(model, device_ids=[rank], broadcast_buffers=False, find_unused_parameters=True)
+    model = DP(model, device_ids=[rank])
 
     optimizer = optim.Adam(
         model.parameters(),
@@ -303,7 +302,7 @@ def train(rank, opt):
             tid=tid,
             loss_func=loss_func,
             rank=rank,
-            if_SUN360=True,
+            if_SUN360=False,
             if_vis=if_vis,
         )
         loss_vt = loss_dict.get("loss_vt", 0.0)
@@ -603,13 +602,13 @@ if __name__ == '__main__':
         (
             "--task_name SUN360RCNN "
                 + "--est_bbox --est_kps "
-                # + "--train_cameraCls "
-                # + "--train_roi_h " 
-                # + "--accu_model "
-                # + "--loss_person_all_layers "
-                # + "--num_layers 3 "
-                # + "--pointnet_camH " 
-                # + "--pointnet_camH_refine --pointnet_personH_refine "
+                + "--train_cameraCls "
+                + "--train_roi_h " 
+                + "--accu_model "
+                + "--loss_person_all_layers "
+                + "--num_layers 3 "
+                + "--pointnet_camH " 
+                + "--pointnet_camH_refine --pointnet_personH_refine "
             + "--config-file config/coco_config_small_synBN1108_kps.yaml  "
             + "--resume checkpointer_epoch0055_iter0136785.pth "
         ).split(),
@@ -618,8 +617,7 @@ if __name__ == '__main__':
     world_size    = int(os.environ["WORLD_SIZE"])
     opt.distributed = num_gpus > 1
     # // Only if I don't use tasks-per-node
-    # if opt.distributed:
-    # 	torch.multiprocessing.spawn(train, nprocs=world_size, args=[opt])
+    # if opt.distributed: torch.multiprocessing.spawn(train, nprocs=world_size, args=[opt])
     # else:
     #
     rank          = int(os.environ["SLURM_PROCID"])

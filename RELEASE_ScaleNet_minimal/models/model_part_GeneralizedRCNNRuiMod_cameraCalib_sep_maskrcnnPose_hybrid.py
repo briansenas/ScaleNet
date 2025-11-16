@@ -193,7 +193,8 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
             )
 
             if self.training:
-                return_dict.update(detector_losses)
+                # Already included in the previous line inside "detector_losses"
+                # return_dict.update(detector_losses) 
                 if self.opt.est_bbox:
                     return_dict.update(proposal_losses)
 
