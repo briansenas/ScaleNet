@@ -40,7 +40,7 @@ class ROIBoxHeadRui(torch.nn.Module):
         """
         x = self.feature_extractor(features, proposals)
         class_logits = self.predictor(x)
-        return {"class_logits": class_logits, "feats": None}
+        return {"class_logits": class_logits}
 
 
 def build_roi_box_head_rui(cfg, in_channels, predictor_fn, output_cls_num=None):

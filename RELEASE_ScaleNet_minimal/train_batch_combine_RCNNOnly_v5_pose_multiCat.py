@@ -89,11 +89,13 @@ def train_batch_combine(
     return_dict = {}
     # print(output_RCNN.keys())
     # For DDP we need to include this losses since find_unused_parameters is not working properly
-    # if "loss_objectness" in output_RCNN:
-    #     loss_dict.update({
-    #         "loss_objectness": output_RCNN["loss_objectness"], 
-    #         "loss_rpn_box_reg": output_RCNN["loss_rpn_box_reg"]
-    #     })
+    if "loss_objectness" in output_RCNN:
+        loss_dict.update(
+            {
+                "loss_objectness": output_RCNN["loss_objectness"],
+                "loss_rpn_box_reg": output_RCNN["loss_rpn_box_reg"],
+            }
+        )
     if opt.est_kps:
         loss_dict.update(
             {"loss_kp": output_RCNN["detector_losses"]["loss_kp"] * opt.weight_kps},
@@ -168,9 +170,9 @@ def train_batch_combine(
         # if 'loss_vt_list' in output_RCNN:
         if opt.pointnet_camH:
             loss_vt_list = output_RCNN["loss_vt_list"]
-            assert (
-                len(loss_vt_list) != 0 or opt.loss_last_layer
-            ), "len loss_vt_list cannot be 0 when not loss_last_layer!"
+            assert len(loss_vt_list) != 0 or opt.loss_last_layer, (
+                "len loss_vt_list cannot be 0 when not loss_last_layer!"
+            )
             return_dict.update({"loss_vt_list": loss_vt_list})
 
             if not opt.loss_last_layer:
@@ -279,7 +281,6 @@ def train_batch_combine(
                 "output_vfov_SUN360": output_vfov,
             },
         )
-
     # ========== Some vis
     if if_vis:
         H_nps = H_batch.cpu().numpy()

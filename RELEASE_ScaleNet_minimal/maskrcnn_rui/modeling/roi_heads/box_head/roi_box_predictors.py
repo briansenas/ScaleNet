@@ -56,9 +56,9 @@ class FastRCNNPredictorRuiMod(nn.Module):
         # nn.init.normal_(self.bbox_pred.weight, mean=0, std=0.001)
         # nn.init.constant_(self.bbox_pred.bias, 0)
 
-        use_gn = False
-        self.fc6_dim_reduce = make_fc(104, 64, use_gn)
-        self.fc7_dim_reduce = make_fc(64, 16, use_gn)
+        # use_gn = False
+        # self.fc6_dim_reduce = make_fc(104, 64, use_gn)
+        # self.fc7_dim_reduce = make_fc(64, 16, use_gn)
 
     def forward(self, x):
         x = self.avgpool(x)
@@ -67,8 +67,8 @@ class FastRCNNPredictorRuiMod(nn.Module):
         cls_logit = self.cls_score(x)
         # bbox_pred = self.bbox_pred(x)
 
-        x_reduce = F.relu(self.fc6_dim_reduce(x))
-        x = F.relu(self.fc7_dim_reduce(x_reduce))
+        # x_reduce = F.relu(self.fc6_dim_reduce(x))
+        # x = F.relu(self.fc7_dim_reduce(x_reduce))
 
         # return cls_logit, x
         return cls_logit

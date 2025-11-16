@@ -36,6 +36,7 @@ from utils.model_utils import get_bins_combine
 from utils.train_utils import reduce_loss_dict
 from utils.utils_misc import colored
 
+
 def train(rank, opt):
     opt.debug = False
     opt.checkpoints_folder = "checkpoint"
@@ -49,9 +50,12 @@ def train(rank, opt):
     opt.device = device
     opt.local_rank = rank
     opt.rank = rank
-    world_size    = int(os.environ["WORLD_SIZE"])
-    dist.init_process_group("nccl", rank=rank, world_size=world_size, timeout=datetime.timedelta(seconds=30))
-    if rank == 0: print(f"Group initialized? {dist.is_initialized()}", flush=True)
+    world_size = int(os.environ["WORLD_SIZE"])
+    dist.init_process_group(
+        "nccl", rank=rank, world_size=world_size, timeout=datetime.timedelta(seconds=30)
+    )
+    if rank == 0:
+        print(f"Group initialized? {dist.is_initialized()}", flush=True)
     torch.cuda.set_device(rank)
 
     summary_path = "./summary/" + opt.task_name
@@ -95,7 +99,12 @@ def train(rank, opt):
     model.to(rank)
     model.init_restore()
     model.turn_on_all_params()
-    model = DDP(model, device_ids=[rank], broadcast_buffers=False, find_unused_parameters=True)
+    model = DDP(model, device_ids=[rank], broadcast_buffers=False)
+    # NOTE: to find unused parameters ourselves:
+    # used = set()
+    # for name, p in model.named_parameters():
+    #     if p.requires_grad:
+    #         p.register_hook(lambda grad, n=name: used.add(n))
 
     optimizer = optim.Adam(
         model.parameters(),
@@ -169,7 +178,7 @@ def train(rank, opt):
         start_iter=tid_start,
         logger=logger,
         collate_fn=my_collate,
-        batch_size_override=-1,  
+        batch_size_override=-1,
     )
     eval_loader_coco_vis = make_data_loader(
         CFG,
@@ -228,7 +237,11 @@ def train(rank, opt):
     model.train()
     synchronize()
     for i, coco_data, sun360_data in tqdm(
-        zip(range(0, opt.iter - tid_start), training_loader_coco_vis, train_loader_SUN360),
+        zip(
+            range(0, opt.iter - tid_start),
+            training_loader_coco_vis,
+            train_loader_SUN360,
+        ),
         total=opt.iter,
         initial=tid_start,
     ):
@@ -314,15 +327,28 @@ def train(rank, opt):
             else 0.0
         )
         loss_kp = loss_dict["loss_kp"] if opt.est_kps else 0.0
-        # calib_loss = (
-        #     loss_dict["loss_horizon"]
-        #     + loss_dict["loss_pitch"]
-        #     + loss_dict["loss_roll"]
-        #     + loss_dict["loss_vfov"] 
-        # ) if opt.train_cameraCls else 0.0
-        calib_loss = 0
+        calib_loss = (
+            (
+                loss_dict["loss_horizon"]
+                + loss_dict["loss_pitch"]
+                + loss_dict["loss_roll"]
+                + loss_dict["loss_vfov"]
+            )
+            if opt.train_cameraCls
+            else 0.0
+        )
         total_loss = sum(loss for loss in loss_dict.values())
         total_loss.backward()
+        # after loss.backward():
+        # NOTE: When attempting to find unused parameters in DDP
+        # print(
+        #     "UNUSED:",
+        #     [
+        #         n
+        #         for n, p in model.named_parameters()
+        #         if p.requires_grad and n not in used
+        #     ],
+        # )
         synchronize()
         optimizer.step()
         if tid % opt.summary_every_iter == 0:
@@ -394,8 +420,11 @@ def train(rank, opt):
     if opt.distributed:
         dist.destroy_process_group()
 
-if __name__ == '__main__':
-    current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+
+if __name__ == "__main__":
+    current_dir = os.path.dirname(
+        os.path.abspath(inspect.getfile(inspect.currentframe()))
+    )
     print(current_dir)
     sys.path.insert(0, current_dir)
     torch_version = torch.__version__
@@ -405,7 +434,9 @@ if __name__ == '__main__':
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    parser = argparse.ArgumentParser(description="Rui's Scale Estimation Network Training")
+    parser = argparse.ArgumentParser(
+        description="Rui's Scale Estimation Network Training"
+    )
     # Training
     parser.add_argument("--task_name", type=str, default="tmp", help="resume training")
     parser.add_argument(
@@ -446,7 +477,9 @@ if __name__ == '__main__':
         default=1,
         help="save checkpoint every ? epoch",
     )
-    parser.add_argument("--vis_every_epoch", type=int, default=5, help="vis every ? epoch")
+    parser.add_argument(
+        "--vis_every_epoch", type=int, default=5, help="vis every ? epoch"
+    )
     # Model
     parser.add_argument(
         "--accu_model",
@@ -602,26 +635,26 @@ if __name__ == '__main__':
     opt = parser.parse_args(
         (
             "--task_name SUN360RCNN "
-                + "--est_bbox --est_kps "
-                # + "--train_cameraCls "
-                # + "--train_roi_h " 
-                # + "--accu_model "
-                # + "--loss_person_all_layers "
-                # + "--num_layers 3 "
-                # + "--pointnet_camH " 
-                # + "--pointnet_camH_refine --pointnet_personH_refine "
+            "--est_bbox --est_kps "
+            + "--train_cameraCls "
+            + "--train_roi_h "
+            + "--accu_model "
+            + "--loss_person_all_layers "
+            + "--num_layers 3 "
+            + "--pointnet_camH "
+            + "--pointnet_camH_refine --pointnet_personH_refine "
             + "--config-file config/coco_config_small_synBN1108_kps.yaml  "
             + "--resume checkpointer_epoch0055_iter0136785.pth "
         ).split(),
     )
     num_gpus = torch.cuda.device_count()
-    world_size    = int(os.environ["WORLD_SIZE"])
+    world_size = int(os.environ["WORLD_SIZE"])
     opt.distributed = num_gpus > 1
     # // Only if I don't use tasks-per-node
     # if opt.distributed:
     # 	torch.multiprocessing.spawn(train, nprocs=world_size, args=[opt])
     # else:
     #
-    rank          = int(os.environ["SLURM_PROCID"])
+    rank = int(os.environ["SLURM_PROCID"])
     print("My slurm local rank is: ", rank)
     train(rank, opt)
