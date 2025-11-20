@@ -24,7 +24,6 @@ class COCO2017Scale:
         opt=None,
         dataset_name="",
     ):
-
         assert split in ["train", "val", "test"], (
             "COCO2017Scale: Wrong dataset split: %s!" % split
         )

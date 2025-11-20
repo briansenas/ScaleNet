@@ -89,7 +89,7 @@ def train_batch_combine(
     return_dict = {}
     # print(output_RCNN.keys())
     # For DDP we need to include this losses since find_unused_parameters is not working properly
-    if "loss_objectness" in output_RCNN:
+    if opt.est_rpn:
         loss_dict.update(
             {
                 "loss_objectness": output_RCNN["loss_objectness"],
@@ -240,6 +240,7 @@ def train_batch_combine(
             image_batch_list=inputSUN360_Image_maskrcnnTransform_list,
             list_of_oneLargeBbox_list=list_of_oneLargeBbox_list,
         )
+        # print(output_RCNN_SUN360.keys())
         output_horizon = output_RCNN_SUN360["output_horizon"]
         output_pitch = output_RCNN_SUN360["output_pitch"]
         output_roll = output_RCNN_SUN360["output_roll"]

@@ -75,9 +75,9 @@ class CombinedClassifierHeads(torch.nn.ModuleDict):
                 "output_vfov": loss_vfov,
             },
         )
-        if not self.opt.pointnet_camH:
-            loss_camH = self.classifier_camH(features, proposals, targets)
-            losses.update({"output_camH": loss_camH})
+        # if not self.opt.pointnet_camH:
+        #     loss_camH = self.classifier_camH(features, proposals, targets)
+        #     losses.update({"output_camH": loss_camH})
         return losses
 
 
@@ -109,31 +109,31 @@ def build_classifier_heads(cfg, opt, in_channels):
             build_roi_box_head_rui(cfg, in_channels, make_roi_box_predictor_rui),
         ),
     )
-    if not opt.pointnet_camH:
-        if opt.direct_camH:
-            roi_heads.append(
-                (
-                    "classifier_camH",
-                    build_roi_box_head_rui(
-                        cfg,
-                        in_channels,
-                        make_roi_box_predictor_rui,
-                        output_cls_num=1,
-                    ),
-                ),
-            )
-        else:
-            roi_heads.append(
-                (
-                    "classifier_camH",
-                    build_roi_box_head_rui(
-                        cfg,
-                        in_channels,
-                        make_roi_box_predictor_rui,
-                    ),
-                ),
-            )
-        pass
+    # if not opt.pointnet_camH:
+    # if opt.direct_camH:
+    #     roi_heads.append(
+    #         (
+    #             "classifier_camH",
+    #             build_roi_box_head_rui(
+    #                 cfg,
+    #                 in_channels,
+    #                 make_roi_box_predictor_rui,
+    #                 output_cls_num=1,
+    #             ),
+    #         ),
+    #     )
+    # else:
+    #     roi_heads.append(
+    #         (
+    #             "classifier_camH",
+    #             build_roi_box_head_rui(
+    #                 cfg,
+    #                 in_channels,
+    #                 make_roi_box_predictor_rui,
+    #             ),
+    #         ),
+    #     )
+    # pass
 
     # combine individual heads in a single module
     roi_heads = CombinedClassifierHeads(cfg, opt, roi_heads)
@@ -234,7 +234,7 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                 )
             losses.update(loss_keypoint)
             outputs.update(output_kp)
-
+        # print(losses)
         return x, detections, detections_nms, losses, outputs
 
 

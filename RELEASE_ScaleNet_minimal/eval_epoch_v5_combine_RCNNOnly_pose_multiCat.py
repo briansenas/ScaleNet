@@ -83,7 +83,6 @@ def eval_epoch_combine_RCNNOnly(
                 target_maskrcnnTransform_list,
                 labels_list,
             ) in enumerate(t):
-
                 if if_debug:
                     print("[eval_epoch] i, rank, im_filename", i, rank, im_filename)
 
@@ -414,7 +413,6 @@ def eval_epoch_combine_RCNNOnly(
                     for layer_idx, person_hs_list_concat_all_layer in enumerate(
                         person_hs_list_concat_all_layers,
                     ):
-
                         person_hs = [
                             person_h
                             for person_h, label_h in zip(

@@ -33,11 +33,14 @@ _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
 # the path in paths_catalog. Else, it will use it as the specified absolute
 # path
 _C.MODEL.WEIGHT = ""
-_C.MODEL.RCNN_WEIGHT = "detectron2://COCO-Keypoints/keypoint_rcnn_R_50_FPN_1x/139840973/model_final_a6e10b.pkl"
-_C.MODEL.RCNN_WEIGHT_BACKBONE = "checkpoint/checkpointer_epoch0055_iter0136785.pth"
-_C.MODEL.RCNN_WEIGHT_BOX_HEAD = "checkpoint/checkpointer_epoch0055_iter0136785.pth"
-_C.MODEL.RCNN_WEIGHT_KPS_HEAD = "checkpoint/checkpointer_epoch0055_iter0136785.pth"
-_C.MODEL.RCNN_WEIGHT_CLS_HEAD = "checkpoint/checkpointer_epoch0055_iter0136785.pth"
+_C.MODEL.RCNN_WEIGHT = "SUN360RCNN/checkpointer_epoch0055_iter0136785.pth"
+_C.MODEL.RCNN_WEIGHT_BACKBONE = "SUN360RCNN"
+_C.MODEL.RCNN_WEIGHT_BOX_HEAD = "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+# _C.MODEL.RCNN_WEIGHT_KPS_HEAD = (
+#     "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
+# )
+_C.MODEL.RCNN_WEIGHT_KPS_HEAD = "catalog://ImageNetPretrained/MSRA/R-50"
+_C.MODEL.RCNN_WEIGHT_CLS_HEAD = "SUN360RCNN"
 _C.MODEL.DENSENET_WEIGHT = ""
 
 _C.MODEL.LOSS = CN()
@@ -98,7 +101,7 @@ _C.DATALOADER.ASPECT_RATIO_GROUPING = True
 
 _C.DATA = CN()
 _C.DATA.COCO = CN()
-_C.DATA.COCO.GOOD_NUM = 10
+_C.DATA.COCO.GOOD_NUM = 100
 _C.DATA.COCO.CLIP_N_IN_MASKRCNN = False
 # _C.DATA.COCO.TRAIN_VAL_OVERRIDE = ''
 _C.DATA.COCO.COCO_SUBSET = "coco_scale_eccv"
@@ -236,7 +239,7 @@ _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES_bbox = 81
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES_h = 256
 
 # Hidden layer dimension when using an MLP for the RoI box head
-_C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
+_C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 104
 # GN
 _C.MODEL.ROI_BOX_HEAD.USE_GN = False
 # Dilation
@@ -310,6 +313,7 @@ _C.MODEL.RESNETS.STEM_FUNC = "StemWithFixedBatchNorm"
 _C.MODEL.RESNETS.RES5_DILATION = 1
 
 _C.MODEL.RESNETS.BACKBONE_OUT_CHANNELS = 256 * 4
+# _C.MODEL.RESNETS.BACKBONE_OUT_CHANNELS = 256
 _C.MODEL.RESNETS.RES2_OUT_CHANNELS = 256
 _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
 

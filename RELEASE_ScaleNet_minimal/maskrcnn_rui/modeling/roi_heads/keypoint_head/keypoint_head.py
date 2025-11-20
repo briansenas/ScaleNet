@@ -51,6 +51,23 @@ class ROIKeypointHead(torch.nn.Module):
                 kaiming_init=kaiming_init,
             )
 
+    # def add_gt_proposals(self, proposals, targets):
+    #     """
+    #     Arguments:
+    #         proposals: list[BoxList]
+    #         targets: list[BoxList]
+    #     """
+    #     fields = proposals[0].fields()
+    #     gt_boxes = [target.copy_with_fields([]) for target in targets]
+    #     for gt_box in gt_boxes:
+    #         for field in fields:
+    #             gt_box.add_field(field, proposals[0].get_field(field))
+    #     proposals = [
+    #         cat_boxlist((proposal, gt_box))
+    #         for proposal, gt_box in zip(proposals, gt_boxes)
+    #     ]
+    #     return proposals
+
     def forward(
         self,
         features,
@@ -140,9 +157,9 @@ class ROIKeypointHead(torch.nn.Module):
                 )
             ]
             kp_logits_valid = torch.cat(kp_logits_valid_list)
-            assert (
-                sum(num_bbox_valid_per_image) == kp_logits_valid.shape[0]
-            ), "%d-%d" % (sum(num_bbox_valid_per_image), kp_logits_valid.shape[0])
+            assert sum(num_bbox_valid_per_image) == kp_logits_valid.shape[0], (
+                "%d-%d" % (sum(num_bbox_valid_per_image), kp_logits_valid.shape[0])
+            )
             loss_kp = self.loss_evaluator(proposals_valid, kp_logits_valid)
         return x, proposals, proposals_post, dict(loss_kp=loss_kp), output_kp
 

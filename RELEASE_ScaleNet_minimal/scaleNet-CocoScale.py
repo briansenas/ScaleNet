@@ -33,8 +33,9 @@ from utils.eval_save_utils_combine_RCNNONly import check_save
 from utils.logger import printer as PRINTER
 from utils.logger import setup_logger
 from utils.model_utils import get_bins_combine
-from utils.train_utils import reduce_loss_dict
+from utils.train_utils import process_losses, process_writer, reduce_loss_dict
 from utils.utils_misc import colored
+from collections import defaultdict
 
 
 def train(rank, opt):
@@ -48,7 +49,6 @@ def train(rank, opt):
     opt.cfg = CFG
     device = "cuda"
     opt.device = device
-    opt.local_rank = rank
     opt.rank = rank
     world_size = int(os.environ["WORLD_SIZE"])
     dist.init_process_group(
@@ -99,12 +99,45 @@ def train(rank, opt):
     model.to(rank)
     model.init_restore()
     model.turn_on_all_params()
-    model = DDP(model, device_ids=[rank], broadcast_buffers=False)
-    # NOTE: to find unused parameters ourselves:
+    if not opt.est_rpn and opt.est_bbox:
+        for _, param in model.RCNN.rpn.named_parameters():
+            param.requires_grad = False
+    for _, param in model.RCNN.backbone.named_parameters():
+        param.requires_grad = False
+
+    model = DDP(
+        model,
+        device_ids=[rank],
+        broadcast_buffers=False,
+        # find_unused_parameters=True,
+    )
+
+    # # NOTE: to find unused parameters ourselves:
     # used = set()
     # for name, p in model.named_parameters():
     #     if p.requires_grad:
     #         p.register_hook(lambda grad, n=name: used.add(n))
+    #
+    # activation_norms = {}
+    #
+    # def activation_hook(name):
+    #     def _hook(module, inp, out):
+    #         # out can be tuple for LSTMs etc — handle only tensors
+    #         if torch.is_tensor(out):
+    #             activation_norms[name] = float(out.norm().item())
+    #         elif (
+    #             isinstance(out, (list, tuple))
+    #             and len(out) > 0
+    #             and torch.is_tensor(out[0])
+    #         ):
+    #             activation_norms[name] = float(out[0].norm().item())
+    #         else:
+    #             activation_norms[name] = None
+    #
+    #     return _hook
+    #
+    # for name, module in model.named_modules():
+    #     module.register_forward_hook(activation_hook(name))
 
     optimizer = optim.Adam(
         model.parameters(),
@@ -127,6 +160,8 @@ def train(rank, opt):
         save_to_disk,
         logger=logger,
         if_print=False,
+        if_reset_scheduler=opt.reset_scheduler,
+        if_reset_lr=opt.reset_lr,
     )
     tid_start = 0
     epoch_start = 0
@@ -137,10 +172,11 @@ def train(rank, opt):
             checkpoint_restored, _, _ = checkpointer.load(
                 f=os.path.join(opt.checkpoints_folder, opt.resume),
             )
-        if "iteration" in checkpoint_restored:
-            tid_start = checkpoint_restored["iteration"]
-        if "epoch" in checkpoint_restored:
-            epoch_start = checkpoint_restored["epoch"]
+        if not opt.reset_iter:
+            if "iteration" in checkpoint_restored:
+                tid_start = checkpoint_restored["iteration"]
+            if "epoch" in checkpoint_restored:
+                epoch_start = checkpoint_restored["epoch"]
         logger.info(
             colored(
                 "Restoring from epoch %d - iter %d" % (epoch_start, tid_start),
@@ -190,21 +226,24 @@ def train(rank, opt):
         batch_size_override=-1,
     )
 
-    ds_train_SUN360 = SUN360Horizon(
-        transforms=train_trnfs_maskrcnn,
-        train=True,
-        logger=logger,
-    )
-    train_loader_SUN360 = make_data_loader(
-        CFG,
-        ds_train_SUN360,
-        is_train=True,
-        is_distributed=opt.distributed,
-        start_iter=tid_start,
-        logger=logger,
-        collate_fn=my_collate_SUN360,
-        batch_size_override=-1,
-    )
+    if opt.train_cameraCls:
+        ds_train_SUN360 = SUN360Horizon(
+            transforms=train_trnfs_maskrcnn,
+            train=True,
+            logger=logger,
+        )
+        train_loader_SUN360 = iter(
+            make_data_loader(
+                CFG,
+                ds_train_SUN360,
+                is_train=True,
+                is_distributed=opt.distributed,
+                start_iter=tid_start,
+                logger=logger,
+                collate_fn=my_collate_SUN360,
+                batch_size_override=4,
+            )
+        )
     results_path = "train_results"
     Path(results_path).mkdir(exist_ok=True)
     task_name = opt.resume
@@ -224,7 +263,7 @@ def train(rank, opt):
 
     epoch = 0
     epochs_evalued = []
-
+    ctx = defaultdict(list)
     loss_func = torch.nn.L1Loss()
     if opt.distributed:
         rank = dist.get_rank()
@@ -236,11 +275,10 @@ def train(rank, opt):
     )
     model.train()
     synchronize()
-    for i, coco_data, sun360_data in tqdm(
+    for i, coco_data in tqdm(
         zip(
             range(0, opt.iter - tid_start),
             training_loader_coco_vis,
-            train_loader_SUN360,
         ),
         total=opt.iter,
         initial=tid_start,
@@ -261,27 +299,6 @@ def train(rank, opt):
             target_maskrcnnTransform_list,
             labels_list,
         ) = coco_data
-        (
-            _,
-            inputSUN360_Image_yannickTransform_list,
-            horizon_dist_gt,
-            pitch_dist_gt,
-            roll_dist_gt,
-            vfov_dist_gt,
-            _,
-            _,
-            _,
-            _,
-            _,
-            _,
-            _,
-            W_list,
-            H_list,
-            _,
-            _,
-            _,
-            _,
-        ) = sun360_data
         tid = i + tid_start
         is_better = False
         input_dict = {
@@ -298,16 +315,42 @@ def train(rank, opt):
             "bins": bins,
             "target_maskrcnnTransform_list": target_maskrcnnTransform_list,
             "labels_list": labels_list,
-            "horizon_dist_gt": horizon_dist_gt,
-            "pitch_dist_gt": pitch_dist_gt,
-            "roll_dist_gt": roll_dist_gt,
-            "vfov_dist_gt": vfov_dist_gt,
-            "W_list": W_list,
-            "H_list": H_list,
-            "inputSUN360_Image_yannickTransform_list": inputSUN360_Image_yannickTransform_list,
         }
+        if opt.train_cameraCls:
+            (
+                _,
+                inputSUN360_Image_yannickTransform_list,
+                horizon_dist_gt,
+                pitch_dist_gt,
+                roll_dist_gt,
+                vfov_dist_gt,
+                _,
+                _,
+                _,
+                _,
+                _,
+                _,
+                _,
+                W_list,
+                H_list,
+                _,
+                _,
+                _,
+                _,
+            ) = next(train_loader_SUN360)
+            input_dict.update(
+                {
+                    "horizon_dist_gt": horizon_dist_gt,
+                    "pitch_dist_gt": pitch_dist_gt,
+                    "roll_dist_gt": roll_dist_gt,
+                    "vfov_dist_gt": vfov_dist_gt,
+                    "W_list": W_list,
+                    "H_list": H_list,
+                    "inputSUN360_Image_yannickTransform_list": inputSUN360_Image_yannickTransform_list,
+                }
+            )
         bins = input_dict["bins"]
-        loss_dict, _ = train_batch_combine(
+        loss_dict, return_dict = train_batch_combine(
             input_dict,
             model,
             device,
@@ -316,7 +359,7 @@ def train(rank, opt):
             tid=tid,
             loss_func=loss_func,
             rank=rank,
-            if_SUN360=True,
+            if_SUN360=opt.train_cameraCls,
             if_vis=if_vis,
         )
         loss_vt = loss_dict.get("loss_vt", 0.0)
@@ -338,9 +381,30 @@ def train(rank, opt):
             else 0.0
         )
         total_loss = sum(loss for loss in loss_dict.values())
-        total_loss.backward()
-        # after loss.backward():
-        # NOTE: When attempting to find unused parameters in DDP
+        try:
+            total_loss.backward()
+        except Exception as e:
+            # NOTE: In case backward fails, see what loss was 0.0
+            logger.info(
+                f"Epoch {epoch} Iter {tid}: Loss VT = {loss_vt:.4f} "
+                + f"Loss Person = {loss_person:.4f} Calib Loss = {calib_loss:.4f} "
+                + f"Detection Loss = {loss_detection:.4f} Kps Loss = {loss_kp:.4f} "
+                + f"Total Loss = {total_loss:.4f} ",
+            )
+            logger.error(im_filename)
+            raise e
+        # print(
+        #     "ZERO ACTIVATIONS:",
+        #     [
+        #         name
+        #         for name, norm in activation_norms.items()
+        #         if norm is not None and norm == 0.0
+        #     ],
+        # )
+        # # Clear for next iteration
+        # activation_norms.clear()
+        # # NOTE: When attempting to find unused parameters in DDP
+        # # after loss.backward():
         # print(
         #     "UNUSED:",
         #     [
@@ -349,9 +413,29 @@ def train(rank, opt):
         #         if p.requires_grad and n not in used
         #     ],
         # )
+        # print(f"Iteration {i}: grads seen = {sorted(grad_flags.keys())}")
+        # grad_flags.clear()
         synchronize()
         optimizer.step()
         if tid % opt.summary_every_iter == 0:
+            ctx = process_losses(
+                opt,
+                tid,
+                loss_dict,
+                return_dict,
+                ctx,
+                logger,
+                prefix="train",
+            )
+            process_writer(
+                opt,
+                tid,
+                rank,
+                writer,
+                ctx,
+                logger,
+                prefix="train",
+            )
             logger.info(
                 f"Epoch {epoch} Iter {tid}: Loss VT = {loss_vt:.4f} "
                 + f"Loss Person = {loss_person:.4f} Calib Loss = {calib_loss:.4f} "
@@ -428,6 +512,7 @@ if __name__ == "__main__":
     print(current_dir)
     sys.path.insert(0, current_dir)
     torch_version = torch.__version__
+    torch.autograd.set_detect_anomaly(True)
     torch.multiprocessing.set_sharing_strategy("file_descriptor")
     seed = 140421
     random.seed(seed)
@@ -438,7 +523,7 @@ if __name__ == "__main__":
         description="Rui's Scale Estimation Network Training"
     )
     # Training
-    parser.add_argument("--task_name", type=str, default="tmp", help="resume training")
+    parser.add_argument("--task-name", type=str, default="tmp", help="resume training")
     parser.add_argument(
         "--workers",
         type=int,
@@ -446,16 +531,16 @@ if __name__ == "__main__":
         default=8,
     )
     parser.add_argument(
-        "--save_every_iter",
+        "--save-every-iter",
         type=int,
-        default=100,
+        default=1000,
         help="set to 0 to save ONLY at the end of each epoch",
     )
-    parser.add_argument("--summary_every_iter", type=int, default=100, help="")
+    parser.add_argument("--summary-every-iter", type=int, default=100, help="")
     parser.add_argument(
         "--iter",
         type=int,
-        default=10000,
+        default=90000,
         help="number of iterations to train for",
     )
     parser.add_argument(
@@ -465,40 +550,40 @@ if __name__ == "__main__":
         help="beta1 for adam. default=0.5",
     )
     parser.add_argument(
-        "--not_val",
+        "--not-val",
         action="store_true",
-        help="Do not validate duruign training",
+        help="Do not validate during training",
     )
-    parser.add_argument("--not_vis", action="store_true", help="")
-    parser.add_argument("--not_vis_SUN360", action="store_true", help="")
+    parser.add_argument("--not-vis", action="store_true", help="")
+    parser.add_argument("--not-vis-SUN360", action="store_true", help="")
     parser.add_argument(
-        "--save_every_epoch",
+        "--save-every-epoch",
         type=int,
         default=1,
         help="save checkpoint every ? epoch",
     )
     parser.add_argument(
-        "--vis_every_epoch", type=int, default=5, help="vis every ? epoch"
+        "--vis-every-epoch", type=int, default=5, help="vis every ? epoch"
     )
     # Model
     parser.add_argument(
-        "--accu_model",
+        "--accu-model",
         action="store_true",
         help="Use accurate model with theta instead of Derek's approx.",
     )
-    parser.add_argument("--argmax_val", action="store_true", help="")
+    parser.add_argument("--argmax-val", action="store_true", help="")
     parser.add_argument(
-        "--direct_camH",
+        "--direct-camH",
         action="store_true",
         help="direct preidict one number for camera height ONLY, instead of predicting a distribution",
     )
     parser.add_argument(
-        "--direct_v0",
+        "--direct-v0",
         action="store_true",
         help="direct preidict one number for v0 ONLY, instead of predicting a distribution",
     )
     parser.add_argument(
-        "--direct_fmm",
+        "--direct-fmm",
         action="store_true",
         help="direct preidict one number for fmm ONLY, instead of predicting a distribution",
     )
@@ -511,116 +596,120 @@ if __name__ == "__main__":
         default="NoCkpt",
     )
     parser.add_argument(
-        "--feature_only",
+        "--feature-only",
         action="store_true",
         help="restore only features (remove all classifiers) from checkpoint",
     )
     parser.add_argument(
-        "--reset_scheduler",
+        "--reset-scheduler",
         action="store_true",
         help="",
     )  # NOT working yet
-    parser.add_argument("--reset_lr", action="store_true", help="")  # NOT working yet
+    parser.add_argument("--reset-lr", action="store_true", help="")  # NOT working yet
+    parser.add_argument("--reset-iter", action="store_true", help="")  # NOT working yet
 
     # Device
     parser.add_argument("--cpu", action="store_true", help="Force training on CPU")
-    parser.add_argument("--local_rank", type=int, default=0)
-    parser.add_argument("--master_port", type=str, default="8914")
 
     # DEBUG
     parser.add_argument("--debug", action="store_true", help="Debug eval")
-    parser.add_argument("--debug_memory", action="store_true", help="Debug eval")
+    parser.add_argument("--debug-memory", action="store_true", help="Debug eval")
 
     # Mask R-CNN
     # Modules
     parser.add_argument(
-        "--train_cameraCls",
+        "--train-cameraCls",
         action="store_true",
         help="Disable camera calibration network",
     )
-    parser.add_argument("--train_roi_h", action="store_true", help="")
+    parser.add_argument("--train-roi-h", action="store_true", help="")
     parser.add_argument(
-        "--est_bbox",
+        "--est-bbox",
         action="store_true",
         help="Enable estimating bboxes instead of using GT bboxes",
     )
     parser.add_argument(
-        "--est_kps",
+        "--est-rpn",
+        action="store_true",
+        help="Enable training of the backbone RPN model",
+    )
+    parser.add_argument(
+        "--est-kps",
         action="store_true",
         help="Enable estimating keypoints",
     )
-    parser.add_argument("--if_discount", action="store_true", help="")
-    parser.add_argument("--discount_from", type=str, default="pred")  # ('GT', 'pred')
+    parser.add_argument("--if-discount", action="store_true", help="")
+    parser.add_argument("--discount-from", type=str, default="pred")  # ('GT', 'pred')
 
     # Losses
     parser.add_argument(
-        "--loss_last_layer",
+        "--loss-last-layer",
         action="store_true",
         help="Using loss of last layer only",
     )
     parser.add_argument(
-        "--loss_person_all_layers",
+        "--loss-person-all-layers",
         action="store_true",
         help="Using loss of last layer only",
     )
     parser.add_argument(
-        "--not_rcnn",
+        "--not-rcnn",
         action="store_true",
         help="Disable Mask R-CNN person height bbox head",
     )
-    parser.add_argument("--no_kps_loss", action="store_true", help="")
+    parser.add_argument("--no-kps_loss", action="store_true", help="")
 
     # Archs
-    parser.add_argument("--pointnet_camH", action="store_true", help="")
-    parser.add_argument("--pointnet_camH_refine", action="store_true", help="")
-    parser.add_argument("--pointnet_personH_refine", action="store_true", help="")
+    parser.add_argument("--pointnet-camH", action="store_true", help="")
+    parser.add_argument("--pointnet-camH-refine", action="store_true", help="")
+    parser.add_argument("--pointnet-personH-refine", action="store_true", help="")
     parser.add_argument(
-        "--pointnet_roi_feat_input",
+        "--pointnet-roi-feat-input",
         action="store_true",
         help="",
     )  # NOT working yet
     parser.add_argument(
-        "--pointnet_roi_feat_input_person3",
+        "--pointnet-roi-feat-input-person3",
         action="store_true",
         help="",
     )  # NOT working yet
     parser.add_argument(
-        "--pointnet_fmm_refine",
+        "--pointnet-fmm-refine",
         action="store_true",
         help="",
     )  # NOT working yet
     parser.add_argument(
-        "--pointnet_v0_refine",
+        "--pointnet-v0-refine",
         action="store_true",
         help="",
     )  # NOT working yet
     parser.add_argument(
-        "--not_pointnet_detach_input",
+        "--not-pointnet-detach-input",
         action="store_true",
         help="",
     )  # NOT working yet
-    parser.add_argument("--num_layers", type=int, default=3)
-    parser.add_argument("--fit_derek", action="store_true", help="")
+    parser.add_argument("--num-layers", type=int, default=3)
+    parser.add_argument("--fit-derek", action="store_true", help="")
     # weights
     parser.add_argument(
-        "--weight_SUN360",
+        "--weight-SUN360",
         type=float,
         default=1.0,
         help="weight for Yannick's losses. default=1.",
     )
     parser.add_argument(
-        "--weight_kps",
+        "--weight-kps",
         type=float,
         default=10,
         help="weight for Yannick's losses. default=1.",
     )
 
     # debug
-    parser.add_argument("--zero_pitch", action="store_true", help="")  # NOT working yet
+    parser.add_argument("--zero-pitch", action="store_true", help="")  # NOT working yet
 
     parser.add_argument(
         "--config-file",
-        default="",
+        default="config/coco_config_small_synBN1108_kps.yaml",
         metavar="FILE",
         help="path to config file",
         type=str,
@@ -632,21 +721,7 @@ if __name__ == "__main__":
         nargs=argparse.REMAINDER,
     )
 
-    opt = parser.parse_args(
-        (
-            "--task_name SUN360RCNN "
-            "--est_bbox --est_kps "
-            + "--train_cameraCls "
-            + "--train_roi_h "
-            + "--accu_model "
-            + "--loss_person_all_layers "
-            + "--num_layers 3 "
-            + "--pointnet_camH "
-            + "--pointnet_camH_refine --pointnet_personH_refine "
-            + "--config-file config/coco_config_small_synBN1108_kps.yaml  "
-            + "--resume checkpointer_epoch0055_iter0136785.pth "
-        ).split(),
-    )
+    opt = parser.parse_args()
     num_gpus = torch.cuda.device_count()
     world_size = int(os.environ["WORLD_SIZE"])
     opt.distributed = num_gpus > 1

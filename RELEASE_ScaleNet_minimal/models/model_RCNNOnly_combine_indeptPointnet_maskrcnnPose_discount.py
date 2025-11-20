@@ -897,8 +897,7 @@ class RCNNOnly_combine(nn.Module):
 
                     track_list.update(
                         {
-                            "%d"
-                            % (layer_idx + 1): {
+                            "%d" % (layer_idx + 1): {
                                 "if_detach": not is_last_layer,
                                 "if_vis": if_vis,
                                 "if_fit_derek": is_last_layer and self.opt.fit_derek,
@@ -955,7 +954,7 @@ class RCNNOnly_combine(nn.Module):
                 print(
                     colored(
                         "---- Total bboxes does not match "
-                        f'{bboxes_length} {len(preds_RCNN["person_h_list"][idx])}',
+                        f"{bboxes_length} {len(preds_RCNN['person_h_list'][idx])}",
                         "yellow",
                         "on_red",
                     ),

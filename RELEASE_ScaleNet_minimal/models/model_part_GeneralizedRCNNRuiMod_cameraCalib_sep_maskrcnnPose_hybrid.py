@@ -65,6 +65,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
             self.logger.setLevel(logging.INFO)
 
         self.backbone = build_backbone(cfg)
+        # print(self.backbone.out_channels)
         # self.rpn = build_rpn(cfg, self.backbone.out_channels)
 
         self.if_classifier_heads = "classifier_heads" not in modules_not_build
@@ -148,6 +149,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
         images, image_sizes_after_transform = self.prepare_images(
             original_image_batch_list,
         )
+        # print(images.tensors.shape)
         features = self.backbone(images.tensors)
         return_dict = {"image_sizes_after_transform": image_sizes_after_transform}
         if self.if_roi_bbox_heads and input_data in ["coco", "IMDB-23K"]:
@@ -194,7 +196,7 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
 
             if self.training:
                 # Already included in the previous line inside "detector_losses"
-                # return_dict.update(detector_losses) 
+                # return_dict.update(detector_losses)
                 if self.opt.est_bbox:
                     return_dict.update(proposal_losses)
 
@@ -240,7 +242,6 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                     image_sizes_after_transform,
                 )
             ]
-
             cls_outputs = self.classifier_heads(features, list_of_oneLargeBbox_list)
             return_dict.update(
                 {
@@ -250,10 +251,11 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                     "output_vfov": cls_outputs["output_vfov"]["class_logits"],
                 },
             )
-            if not self.opt.pointnet_camH:
-                return_dict.update(
-                    {"output_camH": cls_outputs["output_camH"]["class_logits"]},
-                )
+            # NOTE: loss function not implemented for this case
+            # if not self.opt.pointnet_camH:
+            #     return_dict.update(
+            #         {"output_camH": cls_outputs["output_camH"]["class_logits"]},
+            #     )
 
         return return_dict
 

@@ -2,9 +2,9 @@
 
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNNRui"
-  RCNN_WEIGHT_BACKBONE: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+  RCNN_WEIGHT_BACKBONE: "SUN360RCNN"
   RCNN_WEIGHT_BOX_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-  RCNN_WEIGHT_CLS_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+  RCNN_WEIGHT_CLS_HEAD: "SUN360RCNN"
 
 # What is this check point?
   DENSENET_WEIGHT: "model_best.pth.tar"

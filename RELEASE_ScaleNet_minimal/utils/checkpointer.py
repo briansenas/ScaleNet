@@ -24,6 +24,7 @@ class Checkpointer:
         logger=None,
         if_print=True,
         if_reset_scheduler=False,
+        if_reset_lr=False,
     ):
         self.opt = opt
         self.model = model
@@ -37,6 +38,7 @@ class Checkpointer:
         self.logger = logger
         self.if_print = if_print
         self.if_reset_scheduler = if_reset_scheduler
+        self.if_reset_lr = if_reset_lr
 
     def save(self, name, **kwargs):
         if not self.save_dir:
@@ -111,7 +113,15 @@ class Checkpointer:
             replace_kws=replace_kws,
             replace_with_kws=replace_with_kws,
         )
-        if "optimizer" in checkpoint and self.optimizer:
+        if not self.if_reset_lr:
+            self.logger.info(
+                colored(
+                    "Not loading the optimizer saved in the checkpoint",
+                    "yellow",
+                    "on_red",
+                )
+            )
+        elif "optimizer" in checkpoint and self.optimizer:
             self.logger.info(f"Loading optimizer from {f}")
             groups = self.optimizer.param_groups
             saved_groups = checkpoint["optimizer"]["param_groups"]
@@ -132,13 +142,17 @@ class Checkpointer:
             self.logger.info(
                 colored("Optimizer not found! Thus not Restored!", "yellow", "on_red"),
             )
-        if "scheduler" in checkpoint and self.scheduler:
+        if self.if_reset_scheduler:
+            self.logger.info(
+                colored(
+                    "Not loading the scheduler saved in the checkpoint",
+                    "yellow",
+                    "on_red",
+                )
+            )
+        elif "scheduler" in checkpoint and self.scheduler:
             self.logger.info(f"Loading scheduler from {f}")
             self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
-            if self.if_reset_scheduler:
-                self.scheduler._reset()
-                self.logger.info("scheduler._reset()")
-
         else:
             self.logger.info(
                 colored("Scheduler not found! Thus not Restored!", "yellow", "on_red"),
@@ -214,6 +228,7 @@ class DetectronCheckpointer(Checkpointer):
         logger=None,
         if_print=True,
         if_reset_scheduler=False,
+        if_reset_lr=False,
     ):
         super().__init__(
             opt,
@@ -226,6 +241,7 @@ class DetectronCheckpointer(Checkpointer):
             logger,
             if_print,
             if_reset_scheduler=if_reset_scheduler,
+            if_reset_lr=if_reset_lr,
         )
         self.cfg = opt.cfg.clone()
         self.logger = logger

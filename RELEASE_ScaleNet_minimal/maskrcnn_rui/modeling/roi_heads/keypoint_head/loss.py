@@ -105,7 +105,7 @@ class KeypointRCNNLossComputation:
         self._proposals = proposals
         return proposals
 
-    def prepare_targets(self, proposals, targets, if_debug=False):
+    def prepare_targets(self, proposals, targets):
         labels = []
         keypoints = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
@@ -114,17 +114,9 @@ class KeypointRCNNLossComputation:
                 targets_per_image,
             )
             matched_idxs = matched_targets.get_field("matched_idxs")
-            if if_debug:
-                print(
-                    proposals_per_image.bbox.shape,
-                    targets_per_image.bbox.shape,
-                    matched_idxs,
-                    matched_idxs.shape,
-                )
 
             labels_per_image = matched_targets.get_field("labels")
             labels_per_image = labels_per_image.to(dtype=torch.int64)
-
             # this can probably be removed, but is left here for clarity
             # and completeness
             # TODO check if this is the right one, as BELOW_THRESHOLD
@@ -137,12 +129,9 @@ class KeypointRCNNLossComputation:
                 matched_targets.bbox,
             )
             vis_kp = keypoints_per_image.keypoints[..., 2] > 0
-            if if_debug:
-                print("+++++", vis_kp.shape, vis_kp)
             is_visible = (within_box & vis_kp).sum(1) > 0
 
             labels_per_image[~is_visible] = -1
-
             labels.append(labels_per_image)
             keypoints.append(keypoints_per_image)
 
@@ -159,9 +148,8 @@ class KeypointRCNNLossComputation:
             targets (list[BoxList])
         """
 
-        labels, keypoints = self.prepare_targets(proposals, targets, if_debug=False)
+        labels, keypoints = self.prepare_targets(proposals, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
-
         proposals = list(proposals)
         # add corresponding label and regression_targets information to the bounding boxes
         for labels_per_image, keypoints_per_image, proposals_per_image in zip(
