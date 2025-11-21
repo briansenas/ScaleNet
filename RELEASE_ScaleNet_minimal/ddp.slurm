@@ -5,7 +5,7 @@
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks-per-node=2      # total number of tasks per node
 #SBATCH --gres=gpu:2             # number of allocated gpus per node
-#SBATCH --time=00:10:00          # total run time limit (HH:MM:SS)
+#SBATCH --time=05:00:00          # total run time limit (HH:MM:SS)
 #SBATCH --output=./slurmReports/output.%a.out # STDOUT
 
 export MASTER_PORT=$(expr 10000 + $(echo -n $SLURM_JOBID | tail -c 4))
@@ -23,4 +23,5 @@ eval "$(conda shell.bash hook)"
 conda activate /mnt/homeGPU/bsena/ScaleNet/.venv
 export TFHUB_CACHE_DIR=.
 
-srun python scaleNet-DP.py
+srun python scaleNet-CocoScale.py --task-name KPSBBOX --reset-scheduler --reset-lr --reset-iter --est-bbox --est-kps --train-cameraCls --save-every-iter 100 --summary-every-iter 100 --iter 90000
+# srun python scaleNet-CocoScale.py --task-name KPSBBOX --est-bbox --est-kps --train-cameraCls --save-every-iter 100 --summary-every-iter 100 --iter 90000

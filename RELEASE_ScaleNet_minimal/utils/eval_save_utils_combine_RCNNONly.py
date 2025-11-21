@@ -43,38 +43,37 @@ def check_eval_COCO(
             )
             synchronize()
             if isinstance(scheduler, ReduceLROnPlateau) and rank == 0:
-                if "SUN360RCNN" not in opt.task_name:
-                    step_metrics = return_dict_epoch["thres_ratio_dict"]["0.05"]
-                    logger.info(
-                        green(
-                            (
-                                "scheduler.step with thres_ratio_dict = %.2f at check_eval_coco epoch %d; "
-                                + "lr: %.2E; num_bad_epochs: %d; patience: %d; best: %.2E"
-                            )
-                            % (
-                                step_metrics,
-                                epoch,
-                                scheduler.optimizer.param_groups[0]["lr"],
-                                scheduler.num_bad_epochs,
-                                scheduler.patience,
-                                scheduler.best,
-                            ),
+                step_metrics = return_dict_epoch["eval_loss_sum_coco"]
+                logger.info(
+                    green(
+                        (
+                            "scheduler.step with total_loss = %.2f at check_eval_coco epoch %d; "
+                            + "lr: %.2E; num_bad_epochs: %d; patience: %d; best: %.2E"
+                        )
+                        % (
+                            step_metrics,
+                            epoch,
+                            scheduler.optimizer.param_groups[0]["lr"],
+                            scheduler.num_bad_epochs,
+                            scheduler.patience,
+                            scheduler.best,
                         ),
-                    )
-                    scheduler.step(step_metrics)
-                    is_better = scheduler.num_bad_epochs == 0
-                    writer.add_scalar(
-                        "training/scheduler-num_bad_epochs",
-                        scheduler.num_bad_epochs,
-                        tid,
-                    )
-                    writer.add_scalar("training/scheduler-best", scheduler.best, tid)
-                    writer.add_scalar(
-                        "training/scheduler-last_epoch",
-                        scheduler.last_epoch,
-                        tid,
-                    )
-                    writer.add_scalar("training/scheduler-epoch", epoch, tid)
+                    ),
+                )
+                scheduler.step(step_metrics)
+                is_better = scheduler.num_bad_epochs == 0
+                writer.add_scalar(
+                    "training/scheduler-num_bad_epochs",
+                    scheduler.num_bad_epochs,
+                    tid,
+                )
+                writer.add_scalar("training/scheduler-best", scheduler.best, tid)
+                writer.add_scalar(
+                    "training/scheduler-last_epoch",
+                    scheduler.last_epoch,
+                    tid,
+                )
+                writer.add_scalar("training/scheduler-epoch", epoch, tid)
         epochs_evalued.append(epoch)
         model.train()
     return is_better
@@ -270,7 +269,6 @@ def check_save(
         or epoch_save % opt.save_every_epoch == 0
         or (tid != 0 and (opt.save_every_iter != 0 and tid % opt.save_every_iter == 0))
     ):
-
         saved_filename = checkpointer.save(
             "checkpointer_epoch%04d_iter%07d" % (epoch_total, tid),
             **arguments,

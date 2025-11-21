@@ -377,7 +377,7 @@ def process_losses(
         mark=tid,
         logger=logger,
     )
-
+    ctx["total_loss"].append(sum(loss for loss in loss_dict.values()).item())
     if opt.train_cameraCls:
         loss_horizon.append(loss_dict_reduced["loss_horizon"].item())
         loss_pitch.append(loss_dict_reduced["loss_pitch"].item())
@@ -443,7 +443,11 @@ def process_writer(opt, tid, rank, writer, ctx, logger, prefix: str = "train"):
                 "on_blue",
             ),
         )
-
+        writer.add_scalar(
+            f"loss_{prefix}/{prefix}_total_loss",
+            mean(ctx[f"total_loss"]),
+            tid,
+        )
         if opt.train_cameraCls:
             for name in ["horizon", "pitch", "vfov", "roll"]:
                 writer.add_scalar(

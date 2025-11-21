@@ -225,7 +225,6 @@ def train(rank, opt):
         collate_fn=my_collate,
         batch_size_override=-1,
     )
-
     if opt.train_cameraCls:
         ds_train_SUN360 = SUN360Horizon(
             transforms=train_trnfs_maskrcnn,
@@ -273,16 +272,31 @@ def train(rank, opt):
     logger.info(
         f"Starting at iteration {tid_start} to complete {opt.iter} for a total of {opt.iter - tid_start}.",
     )
+    evaluate_at_every = len(training_loader_coco_vis.batch_sampler.batch_sampler)
+    # evaluate_at_every = 1
+    if not opt.not_val:
+        logger.info(
+            f"Evaluating at every {evaluate_at_every} iteration",
+        )
     model.train()
     synchronize()
-    for i, coco_data in tqdm(
-        zip(
-            range(0, opt.iter - tid_start),
-            training_loader_coco_vis,
-        ),
+    train_bar = tqdm(
         total=opt.iter,
         initial=tid_start,
+        desc="Training",
+    )
+    eval_bar = tqdm(
+        total=evaluate_at_every,
+        initial=tid_start % evaluate_at_every,
+        desc="Epoch",
+        position=1,
+    )
+    for i, coco_data in zip(
+        range(0, opt.iter - tid_start),
+        training_loader_coco_vis,
     ):
+        train_bar.update(1)
+        eval_bar.update(1)
         optimizer.zero_grad()
         (
             _,
@@ -456,7 +470,7 @@ def train(rank, opt):
                 is_better=is_better,
             )
         # After computing loss_dict and other stats for this tid/epoch
-        if i != 0 and tid % (len(training_loader_coco_vis) - 1) == 0:
+        if i != 0 and tid % (evaluate_at_every) == 0:
             print("Evaluate the model")
             epoch += 1
             is_better = check_eval_COCO(
