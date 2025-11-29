@@ -139,9 +139,10 @@ def makeAndSaveImg(img_id, img, rndid, if_debug=False):
         vfov=vfov * 180 / np.pi,
         ratio=ar,
     )
-
-    im_filename = f"{os.path.basename(img_id)}-{rndid}.jpg"
-    subdir = im_filename.replace("pano_a", "")[:2]
+    basename = os.path.basename(img_id)
+    im_filename = f"{basename}-{rndid}.jpg"
+    # subdir = im_filename.replace("pano_a", "")[:2]
+    subdir = basename
     # imsave(im_filename), im)
     im_pil = Image.fromarray(im)
     im_pil.save(
@@ -209,8 +210,11 @@ def randomize():
 
 
 def process(im_path):
-    im_filename = f"{os.path.basename(im_path)}-{0}.jpg"
-    subdir = im_filename.replace("pano_a", "")[:2]
+    basename = os.path.basename(im_path)
+    im_filename = f"{basename}-{0}.jpg"
+    # subdir = im_filename.replace("pano_a", "")[:-5]
+    # NOTE: this assures not collisions
+    subdir = basename
     os.makedirs(os.path.join(output_dir, subdir), exist_ok=True)
 
     out_path = os.path.join(output_dir, subdir, im_filename)
@@ -243,22 +247,24 @@ def process(im_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input_dir",
+        "--input-dir",
         type=str,
         default="data/SUN360/train/RGB",
     )
     parser.add_argument(
-        "--output_dir",
+        "--output-dir",
         type=str,
         default="data/SUN360/train_crops_dataset_cvpr_myDistWider",
     )
+    parser.add_argument("--ext", type=str, default="jpg", help="Filetype to filter for")
     args = parser.parse_args()
     input_dir = args.input_dir
     output_dir = args.output_dir
+    ext = args.ext
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(os.path.join(output_dir, "debug"), exist_ok=True)
     with DispDebug("Listing SUN360..."):
-        images = glob(input_dir + "/**/*.jpg", recursive=True)
+        images = glob(input_dir + f"/**/*.{ext}", recursive=True)
 
     random.seed(31415926)
     random.shuffle(images)

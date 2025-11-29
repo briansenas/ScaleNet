@@ -42,11 +42,12 @@ def align_and_update_state_dicts(
     current_keys_renamed = current_keys.copy()
     if not (not replace_kws or not replace_with_kws):
         print(">> replace_kws:", replace_kws, ">> replace_with_kws:", replace_with_kws)
-        assert (
-            len(replace_kws) == len(replace_with_kws) and len(replace_kws) > 0
-        ), "Length of replace_kws %d and replace_with_kws %d should equal and > 0!" % (
-            len(replace_kws),
-            len(replace_with_kws),
+        assert len(replace_kws) == len(replace_with_kws) and len(replace_kws) > 0, (
+            "Length of replace_kws %d and replace_with_kws %d should equal and > 0!"
+            % (
+                len(replace_kws),
+                len(replace_with_kws),
+            )
         )
         # loaded_keys = [loaded_keys.replace('roi_heads.box', 'classifiers_head.head') for loaded_keys in loaded_keys]
 
@@ -125,16 +126,16 @@ def align_and_update_state_dicts(
         key_old = loaded_keys_ori[idx_old]
         model_state_dict[key] = loaded_state_dict[key_old]
 
-        if rank == 0:
-            logger.warning(
-                log_str_template.format(
-                    key,
-                    max_size,
-                    key_old,
-                    max_size_loaded,
-                    tuple(loaded_state_dict[key_old].shape),
-                ),
-            )
+        # if rank == 0:
+        #     logger.warning(
+        #         log_str_template.format(
+        #             key,
+        #             max_size,
+        #             key_old,
+        #             max_size_loaded,
+        #             tuple(loaded_state_dict[key_old].shape),
+        #         ),
+        #     )
         success_loads += 1
 
     if success_loads == all_possible_loads:

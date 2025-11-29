@@ -112,33 +112,6 @@ def train(rank, opt):
         # find_unused_parameters=True,
     )
 
-    # # NOTE: to find unused parameters ourselves:
-    # used = set()
-    # for name, p in model.named_parameters():
-    #     if p.requires_grad:
-    #         p.register_hook(lambda grad, n=name: used.add(n))
-    #
-    # activation_norms = {}
-    #
-    # def activation_hook(name):
-    #     def _hook(module, inp, out):
-    #         # out can be tuple for LSTMs etc — handle only tensors
-    #         if torch.is_tensor(out):
-    #             activation_norms[name] = float(out.norm().item())
-    #         elif (
-    #             isinstance(out, (list, tuple))
-    #             and len(out) > 0
-    #             and torch.is_tensor(out[0])
-    #         ):
-    #             activation_norms[name] = float(out[0].norm().item())
-    #         else:
-    #             activation_norms[name] = None
-    #
-    #     return _hook
-    #
-    # for name, module in model.named_modules():
-    #     module.register_forward_hook(activation_hook(name))
-
     optimizer = optim.Adam(
         model.parameters(),
         lr=CFG.SOLVER.BASE_LR,
@@ -407,28 +380,6 @@ def train(rank, opt):
             )
             logger.error(im_filename)
             raise e
-        # print(
-        #     "ZERO ACTIVATIONS:",
-        #     [
-        #         name
-        #         for name, norm in activation_norms.items()
-        #         if norm is not None and norm == 0.0
-        #     ],
-        # )
-        # # Clear for next iteration
-        # activation_norms.clear()
-        # # NOTE: When attempting to find unused parameters in DDP
-        # # after loss.backward():
-        # print(
-        #     "UNUSED:",
-        #     [
-        #         n
-        #         for n, p in model.named_parameters()
-        #         if p.requires_grad and n not in used
-        #     ],
-        # )
-        # print(f"Iteration {i}: grads seen = {sorted(grad_flags.keys())}")
-        # grad_flags.clear()
         synchronize()
         optimizer.step()
         if tid % opt.summary_every_iter == 0:

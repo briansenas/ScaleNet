@@ -36,10 +36,10 @@ _C.MODEL.WEIGHT = ""
 _C.MODEL.RCNN_WEIGHT = "SUN360RCNN/checkpointer_epoch0055_iter0136785.pth"
 _C.MODEL.RCNN_WEIGHT_BACKBONE = "SUN360RCNN"
 _C.MODEL.RCNN_WEIGHT_BOX_HEAD = "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-# _C.MODEL.RCNN_WEIGHT_KPS_HEAD = (
-#     "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
-# )
-_C.MODEL.RCNN_WEIGHT_KPS_HEAD = "catalog://ImageNetPretrained/MSRA/R-50"
+_C.MODEL.RCNN_WEIGHT_KPS_HEAD = (
+    "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
+)
+# _C.MODEL.RCNN_WEIGHT_KPS_HEAD = "catalog://ImageNetPretrained/MSRA/R-50"
 _C.MODEL.RCNN_WEIGHT_CLS_HEAD = "SUN360RCNN"
 _C.MODEL.DENSENET_WEIGHT = ""
 
@@ -239,7 +239,7 @@ _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES_bbox = 81
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES_h = 256
 
 # Hidden layer dimension when using an MLP for the RoI box head
-_C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 104
+_C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
 # GN
 _C.MODEL.ROI_BOX_HEAD.USE_GN = False
 # Dilation

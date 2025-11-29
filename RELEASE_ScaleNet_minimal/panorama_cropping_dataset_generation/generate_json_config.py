@@ -14,14 +14,21 @@ if __name__ == "__main__":
         type=str,
         default="data/SUN360/train_crops_dataset_cvpr_myDistWider",
     )
-    parser.add_argument("--output-dir", type=str, default="config")
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        default="config/SUN360_train_crops_dataset_cvpr_myDistWider.json",
+    )
+    parser.add_argument("--ext", type=str, default="jpg", help="Filetype to filter for")
     args = parser.parse_args()
     input_dir = args.input_dir
-    output_dir = args.output_dir
-    images = glob.glob(os.path.join(input_dir, "*/*.jpg"))
+    output_file = args.output_file
+    filetype = f"**/**/*.{args.ext}"
+    pattern = os.path.join(input_dir, filetype)
+    images = glob.glob(pattern)
     random.shuffle(images)
     with open(
-        os.path.join(output_dir, os.path.basename(input_dir) + ".json"),
+        os.path.join(output_file),
         "w",
     ) as file:
         file.write(json.dumps(images))
