@@ -203,6 +203,7 @@ def train(rank, opt):
             transforms=train_trnfs_maskrcnn,
             train=True,
             logger=logger,
+            json_name=opt.calib_file,
         )
         train_loader_SUN360 = iter(
             make_data_loader(
@@ -675,6 +676,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config-file",
         default="config/coco_config_small_synBN1108_kps.yaml",
+        metavar="FILE",
+        help="path to config file",
+        type=str,
+    )
+    parser.add_argument(
+        "--calib-file",
+        default="config/train_crops_dataset_cvpr_myDistWider.json",
         metavar="FILE",
         help="path to config file",
         type=str,
