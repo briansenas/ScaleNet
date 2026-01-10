@@ -73,15 +73,20 @@ def make_data_loader(
     override_shuffle=None,
     collate_fn=None,
     batch_size_override=-1,
+    is_sun360=False,
 ):
     num_gpus = get_world_size()
     if is_train:
-        images_per_batch = cfg.SOLVER.IMS_PER_BATCH
-        assert (
-            images_per_batch % num_gpus == 0
-        ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
-            images_per_batch,
-            num_gpus,
+        images_per_batch = (
+            cfg.SOLVER.IMS_PER_BATCH
+            if not is_sun360
+            else cfg.SOLVER.IMS_PER_BATCH_SUN360
+        )
+        assert images_per_batch % num_gpus == 0, (
+            "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
+                images_per_batch,
+                num_gpus,
+            )
         )
         images_per_gpu = (
             images_per_batch // num_gpus
@@ -92,12 +97,14 @@ def make_data_loader(
         num_iters = cfg.SOLVER.MAX_ITER
         drop_last = True
     else:
-        images_per_batch = cfg.TEST.IMS_PER_BATCH
-        assert (
-            images_per_batch % num_gpus == 0
-        ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
-            images_per_batch,
-            num_gpus,
+        images_per_batch = (
+            cfg.TEST.IMS_PER_BATCH if not is_sun360 else cfg.TEST.IMS_PER_BATCH_SUN360
+        )
+        assert images_per_batch % num_gpus == 0, (
+            "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
+                images_per_batch,
+                num_gpus,
+            )
         )
         images_per_gpu = (
             images_per_batch // num_gpus

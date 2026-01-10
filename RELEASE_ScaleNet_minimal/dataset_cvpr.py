@@ -108,7 +108,7 @@ def getMidpointFromAngle(pitch, FoV):
 
 
 def getDeltaHeightFromRoll(roll, im_h, im_w):
-    "The height distance of horizon from the midpoint at image left/right border intersection." ""
+    "The height distance of horizon from the midpoint at image left/right border intersection."
     return im_w / im_h * np.tan(roll) / 2
 
 
@@ -169,8 +169,8 @@ class SUN360Horizon:
         train=True,
         logger=None,
         json_name: str = "config/train_crops_dataset_cvpr_myDistWider.json",
+        debug: bool = False,
     ):
-
         self.transforms = transforms
         if logger is None:
             self.logger = logging.getLogger("SUN360Horizon")
@@ -186,6 +186,9 @@ class SUN360Horizon:
             self.data = glob(os.path.join(DS_ROOT, "**/*.jpg"), recursive=True)
             with open(json_name, "w") as fhdl:
                 json.dump(self.data, fhdl)
+
+        max_load = -1 if not debug else 100
+        self.data = self.data[:max_load]  # Only use 100 examples
         self.logger.info(
             colored(
                 "[SUN360 dataset] Loaded %d images from %s in %.2f seconds."
@@ -197,11 +200,11 @@ class SUN360Horizon:
 
         random.seed(314159265)
         random.shuffle(self.data)
+        train_load = -2000 if not debug else -50
         if train:
-            self.data = self.data[:-2000]
+            self.data = self.data[:train_load]
         else:
-            self.data = self.data[-2000:]
-
+            self.data = self.data[train_load:]
         self.logger.info(
             "===== %d for the %s set..."
             % (len(self.data), "TRAIN" if train else "VAL"),
@@ -236,7 +239,6 @@ class SUN360Horizon:
         y1, y2, y3, y4 = map(torch.from_numpy, (y1, y2, y3, y4))
 
         W_ori, H_ori = im_ori_RGB.size
-
         return (
             im_path,
             im,
@@ -321,7 +323,6 @@ def my_collate_SUN360(batch):
 
 
 if __name__ == "__main__":
-
     this_bin = midpointpitch2bin(1.1, 0.0)
     a = np.zeros((256,))
     a[this_bin] = 1

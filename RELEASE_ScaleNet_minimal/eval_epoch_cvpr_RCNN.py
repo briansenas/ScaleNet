@@ -70,9 +70,7 @@ def eval_epoch_cvpr_RCNN(
     return_dict_epoch = {}
 
     with torch.no_grad():
-        with tqdm(total=len(validation_loader)) as t:
-            t.set_description(f"Ep.{epoch} Eval")
-
+        with tqdm(validation_loader, desc=f"Ep.{epoch} Eval") as t:
             for i, (
                 im_paths_SUN360,
                 inputSUN360_Image_yannickTransform_list,
@@ -93,8 +91,7 @@ def eval_epoch_cvpr_RCNN(
                 idx2,
                 idx3,
                 idx4,
-            ) in enumerate(validation_loader):
-
+            ) in enumerate(t):
                 horizon_dist_gt, pitch_dist_gt, roll_dist_gt, vfov_dist_gt = (
                     horizon_dist_gt.to(device),
                     pitch_dist_gt.to(device),
@@ -208,7 +205,7 @@ def eval_epoch_cvpr_RCNN(
                 eval_loss_vfov = sum(eval_loss_vfov_list) / len(validation_loader)
                 t.set_postfix(loss=eval_loss_sum_SUN360)
 
-                if rank == 0:
+                if rank == 0 and writer is not None:
                     writer.add_scalar(
                         "loss_eval/eval_loss_sum_SUN360",
                         eval_loss_sum_SUN360,
@@ -260,7 +257,7 @@ def eval_epoch_cvpr_RCNN(
 
                     # writer.flush()
 
-                    if if_vis and rank == 0:
+                    if if_vis and rank == 0 and writer is not None:
                         horizon_all = merge_list_of_lists(
                             [
                                 return_dict["horizon_list"]
@@ -322,5 +319,4 @@ def eval_epoch_cvpr_RCNN(
                             tid,
                             bins="doane",
                         )
-
     return return_dict_epoch

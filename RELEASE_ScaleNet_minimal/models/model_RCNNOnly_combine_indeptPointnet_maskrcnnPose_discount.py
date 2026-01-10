@@ -1180,22 +1180,22 @@ class RCNNOnly_combine(nn.Module):
         direct,
         debug=False,
     ):
-        if debug:
-            print("[debug yc_logits_to_est_yc]: direct", direct)
+        # if debug:
+        #     print("[debug yc_logits_to_est_yc]: direct", direct)
         if direct:
             midway = (low_high[0] + low_high[1]) / 2.0
             half_range = low_high[1] - midway
             yc_est_batch = (
                 torch.tanh(torch.squeeze(output_yc_batch, 1)) * half_range + midway
             )
-            if debug:
-                print(
-                    "[debug yc_logits_to_est_yc]: midway, low_high:",
-                    midway,
-                    low_high,
-                    low_high[1],
-                    low_high[0],
-                )
+            # if debug:
+            #     print(
+            #         "[debug yc_logits_to_est_yc]: midway, low_high:",
+            #         midway,
+            #         low_high,
+            #         low_high[1],
+            #         low_high[0],
+            #     )
         else:
             yc_est_batch = prob_to_est(output_yc_batch, bins, reduce_method)
         return yc_est_batch

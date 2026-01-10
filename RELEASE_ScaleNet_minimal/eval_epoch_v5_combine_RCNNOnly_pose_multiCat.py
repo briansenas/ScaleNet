@@ -83,8 +83,8 @@ def eval_epoch_combine_RCNNOnly(
                 target_maskrcnnTransform_list,
                 labels_list,
             ) in enumerate(t):
-                if if_debug:
-                    print("[eval_epoch] i, rank, im_filename", i, rank, im_filename)
+                # if if_debug:
+                #     print("[eval_epoch] i, rank, im_filename", i, rank, im_filename)
 
                 input_dict = {
                     "inputCOCO_Image_maskrcnnTransform_list": inputCOCO_Image_maskrcnnTransform_list,
@@ -114,6 +114,7 @@ def eval_epoch_combine_RCNNOnly(
                     if_SUN360=False,
                     if_vis=if_vis,
                 )
+                toreport = {}
                 if if_loss:
                     loss_dict_reduced = reduce_loss_dict(
                         loss_dict,
@@ -123,6 +124,7 @@ def eval_epoch_combine_RCNNOnly(
 
                     if opt.train_cameraCls and opt.train_roi_h and opt.pointnet_camH:
                         eval_loss_vt_list.append(loss_dict_reduced["loss_vt"].item())
+                        toreport["loss_vt"] = eval_loss_vt_list[-1]
                         if opt.pointnet_camH_refine:
                             loss_vt_layers_dict_reduced = reduce_loss_dict(
                                 return_dict["loss_vt_layers_dict"],
@@ -138,6 +140,7 @@ def eval_epoch_combine_RCNNOnly(
                             eval_loss_person_list.append(
                                 loss_dict_reduced["loss_person"].item(),
                             )
+                            toreport["loss_person"] = eval_loss_person_list[-1]
 
                         vt_loss_allBoxes_dict.update(
                             return_dict["vt_loss_allBoxes_dict"],
@@ -168,6 +171,7 @@ def eval_epoch_combine_RCNNOnly(
 
                     if opt.est_kps:
                         eval_loss_kp_list.append(loss_dict_reduced["loss_kp"].item())
+                        toreport["loss_kp"] = eval_loss_kp_list[-1]
                     if opt.est_bbox:
                         eval_loss_bbox_cls_list.append(
                             loss_dict_reduced["loss_bbox_cls"].item(),
@@ -175,11 +179,16 @@ def eval_epoch_combine_RCNNOnly(
                         eval_loss_bbox_reg_list.append(
                             loss_dict_reduced["loss_bbox_reg"].item(),
                         )
+                        toreport["loss_bbox_cls"] = eval_loss_bbox_cls_list[-1]
+                        toreport["loss_bbox_reg"] = eval_loss_bbox_cls_list[-1]
 
                     im_filename_list += list(im_filename)
 
                     losses = sum(loss for loss in loss_dict_reduced.values())
                     loss_list.append(losses.item())
+                    # Visualization cues
+                    t.set_postfix(**toreport)
+                    t.update()
 
                 # ===== Some vis
                 if rank == 0 and if_vis:
@@ -229,12 +238,12 @@ def eval_epoch_combine_RCNNOnly(
                 vt_loss_allBoxes_dict,
                 return_dict=True,
             )
-            if opt.debug and vt_loss_allBoxes_dict is not None:
-                print(
-                    "++++",
-                    len(list(vt_loss_allBoxes_dict.keys())),
-                    list(sorted(vt_loss_allBoxes_dict.keys())),
-                )
+            # if opt.debug and vt_loss_allBoxes_dict is not None:
+            #     print(
+            #         "++++",
+            #         len(list(vt_loss_allBoxes_dict.keys())),
+            #         list(sorted(vt_loss_allBoxes_dict.keys())),
+            #     )
             vt_loss_allBoxes_list = _dict_to_list(vt_loss_allBoxes_dict)
 
             if opt.fit_derek:
@@ -444,6 +453,7 @@ def eval_epoch_combine_RCNNOnly(
                                 bins="doane",
                             )
 
+                # NOTE: only call this function from rank = 0 due to writer.
                 _, thres_ratio_dict = sum_bbox_ratios(
                     writer,
                     vt_loss_allBoxes_list,
@@ -515,7 +525,7 @@ def eval_epoch_combine_RCNNOnly(
             writer.add_scalar("loss_eval/eval_loss_sum_coco", eval_loss_sum, tid)
         return_dict_epoch.update({"eval_loss_sum_coco": eval_loss_sum})
 
-        if epoch is not None:
+        if rank == 0 and epoch is not None:
             writer.add_scalar("training/eval_epoch", epoch, tid)
 
     return return_dict_epoch

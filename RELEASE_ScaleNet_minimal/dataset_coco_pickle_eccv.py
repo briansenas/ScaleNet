@@ -35,7 +35,6 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
         opt=None,
         write_split=False,
     ):
-
         assert split in ["train", "val", "test"], (
             "COCO2017Scale: Wrong dataset split: %s!" % split
         )
@@ -164,6 +163,13 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
             == len(self.img_files)
             == len(self.yannick_mat_files)
         )
+
+        if opt.debug:
+            max_debug = 100
+            self.bbox_npy_files = self.bbox_npy_files[:max_debug]
+            self.pickle_files = self.pickle_files[:max_debug]
+            self.img_files = self.img_files[:max_debug]
+            self.yannick_mat_files = self.yannick_mat_files[:max_debug]
 
         if write_split and opt.rank == 0:
             list_file = pickle_path.replace("/pickle", "") + "/%s.txt" % split

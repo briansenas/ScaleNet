@@ -99,7 +99,7 @@ def reduce_dict(input_dict, average=True):
     """
     world_size = get_world_size()
     if world_size < 2:
-        print('[comm] world_size==%d; not reduced!'%world_size)
+        # print('[comm] world_size==%d; not reduced!'%world_size)
         return input_dict
     with torch.no_grad():
         names = []

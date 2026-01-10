@@ -146,32 +146,32 @@ def accu_model(input_dict, if_debug=False):
         + 1e-10
     )
 
-    if if_debug:
-        print("Using pitch!", theta_yannick)
-        print("---theta_yannick", theta_yannick)
-        print("---z", z)
-        print("---z1", -(f_pixels_yannick * yc_est))
-        print(
-            "---z2",
-            (
-                f_pixels_yannick * torch.sin(theta_yannick)
-                - (vc - vb) * torch.cos(theta_yannick)
-                + 1e-10
-            ),
-        )
-    if z.detach().cpu().numpy() < 0:
-        if if_debug:
-            print(
-                "----z----=====",
-                z,
-                theta_yannick / np.pi * 180.0,
-                f_pixels_yannick,
-                yc_est,
-                theta_yannick,
-                vc,
-                vb,
-            )
-        negative_z = True
+    # if if_debug:
+    #     print("Using pitch!", theta_yannick)
+    #     print("---theta_yannick", theta_yannick)
+    #     print("---z", z)
+    #     print("---z1", -(f_pixels_yannick * yc_est))
+    #     print(
+    #         "---z2",
+    #         (
+    #             f_pixels_yannick * torch.sin(theta_yannick)
+    #             - (vc - vb) * torch.cos(theta_yannick)
+    #             + 1e-10
+    #         ),
+    #     )
+    # if z.detach().cpu().numpy() < 0:
+    #     if if_debug:
+    #         print(
+    #             "----z----=====",
+    #             z,
+    #             theta_yannick / np.pi * 180.0,
+    #             f_pixels_yannick,
+    #             yc_est,
+    #             theta_yannick,
+    #             vc,
+    #             vb,
+    #         )
+    #     negative_z = True
     vt_camEst = (
         (f_pixels_yannick * torch.cos(theta_yannick) + vc * torch.sin(theta_yannick))
         * y_person
@@ -226,8 +226,8 @@ def accu_model_batch(input_dict, if_debug=False):
     )
     if "pitch_est" in input_dict:
         theta_yannick = input_dict["pitch_est"]
-        if if_debug:
-            print("Using pitch!", theta_yannick)
+        # if if_debug:
+        #     print("Using pitch!", theta_yannick)
     else:
         theta_yannick = torch.atan((vc - v0) / f_pixels_yannick)
     z = -(f_pixels_yannick * yc_est) / (

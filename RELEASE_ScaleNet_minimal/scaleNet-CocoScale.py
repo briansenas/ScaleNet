@@ -22,24 +22,23 @@ from maskrcnn_rui.utils.comm import get_rank, synchronize
 from models.model_RCNNOnly_combine_indeptPointnet_maskrcnnPose_discount import (
     RCNNOnly_combine,
 )
+from eval_epoch_cvpr_RCNN import eval_epoch_cvpr_RCNN
 from tensorboardX import SummaryWriter
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from train_batch_combine_RCNNOnly_v5_pose_multiCat import train_batch_combine
 from utils.checkpointer import DetectronCheckpointer
 from utils.data_utils import make_data_loader
-from utils.eval_save_utils_combine_RCNNONly import check_eval_COCO
 from utils.eval_save_utils_combine_RCNNONly import check_save
 from utils.logger import printer as PRINTER
 from utils.logger import setup_logger
 from utils.model_utils import get_bins_combine
-from utils.train_utils import process_losses, process_writer, reduce_loss_dict
+from utils.train_utils import cycle, process_losses, process_writer
 from utils.utils_misc import colored
 from collections import defaultdict
 
 
 def train(rank, opt):
-    opt.debug = False
     opt.checkpoints_folder = "checkpoint"
     config_file = opt.config_file
     CFG.merge_from_file(config_file)
@@ -59,7 +58,11 @@ def train(rank, opt):
     torch.cuda.set_device(rank)
 
     summary_path = "./summary/" + opt.task_name
-    writer = SummaryWriter(summary_path)
+    if rank == 0:
+        writer = SummaryWriter(summary_path)
+    else:
+        # NOTE: this will make the code fail if not checked properly
+        writer = None
 
     logger = setup_logger(
         "logger:train",
@@ -140,7 +143,7 @@ def train(rank, opt):
     epoch_start = 0
     if opt.resume != "NoCkpt":
         try:
-            checkpoint_restored, _, _ = checkpointer.load(task_name=opt.task_name)
+            checkpoint_restored, _, _ = checkpointer.load(task_name=opt.resume)
         except (ValueError, FileNotFoundError):
             checkpoint_restored, _, _ = checkpointer.load(
                 f=os.path.join(opt.checkpoints_folder, opt.resume),
@@ -204,8 +207,9 @@ def train(rank, opt):
             train=True,
             logger=logger,
             json_name=opt.calib_file,
+            debug=opt.debug,
         )
-        train_loader_SUN360 = iter(
+        train_loader_SUN360 = cycle(
             make_data_loader(
                 CFG,
                 ds_train_SUN360,
@@ -214,8 +218,26 @@ def train(rank, opt):
                 start_iter=tid_start,
                 logger=logger,
                 collate_fn=my_collate_SUN360,
-                batch_size_override=4,
+                batch_size_override=-1,
+                is_sun360=True,
             )
+        )
+        ds_eval_SUN360 = SUN360Horizon(
+            transforms=eval_trnfs_maskrcnn,
+            train=False,
+            logger=logger,
+            json_name=opt.calib_file,
+            debug=opt.debug,
+        )
+        eval_loader_SUN360 = make_data_loader(
+            CFG,
+            ds_eval_SUN360,
+            is_train=False,
+            is_distributed=opt.distributed,
+            logger=logger,
+            collate_fn=my_collate_SUN360,
+            batch_size_override=-1,
+            is_sun360=True,
         )
     results_path = "train_results"
     Path(results_path).mkdir(exist_ok=True)
@@ -235,7 +257,6 @@ def train(rank, opt):
     tid = 0
 
     epoch = 0
-    epochs_evalued = []
     ctx = defaultdict(list)
     loss_func = torch.nn.L1Loss()
     if opt.distributed:
@@ -246,8 +267,11 @@ def train(rank, opt):
     logger.info(
         f"Starting at iteration {tid_start} to complete {opt.iter} for a total of {opt.iter - tid_start}.",
     )
-    evaluate_at_every = len(training_loader_coco_vis.batch_sampler.batch_sampler)
-    # evaluate_at_every = 1
+    evaluate_at_every = (
+        len(training_loader_coco_vis.batch_sampler.batch_sampler)
+        if not opt.debug
+        else 1
+    )
     if not opt.not_val:
         logger.info(
             f"Evaluating at every {evaluate_at_every} iteration",
@@ -425,19 +449,30 @@ def train(rank, opt):
         if i != 0 and tid % (evaluate_at_every) == 0:
             print("Evaluate the model")
             epoch += 1
-            is_better = check_eval_COCO(
-                tid=tid,
-                epoch=epoch,
-                rank=rank,
-                opt=opt,
+            # is_better = check_eval_COCO(
+            #     tid=tid,
+            #     epoch=epoch,
+            #     rank=rank,
+            #     opt=opt,
+            #     model=model,
+            #     eval_loader=eval_loader_coco_vis,
+            #     writer=writer,
+            #     device=device,
+            #     bins=bins,
+            #     logger=logger,
+            #     scheduler=scheduler,
+            #     epochs_evalued=epochs_evalued,
+            # )
+
+            eval_epoch_cvpr_RCNN(
                 model=model,
-                eval_loader=eval_loader_coco_vis,
-                writer=writer,
+                validation_loader=eval_loader_SUN360,
+                epoch=epoch,
+                tid=tid,
                 device=device,
-                bins=bins,
+                writer=writer,
                 logger=logger,
-                scheduler=scheduler,
-                epochs_evalued=epochs_evalued,
+                opt=opt,
             )
 
             check_save(

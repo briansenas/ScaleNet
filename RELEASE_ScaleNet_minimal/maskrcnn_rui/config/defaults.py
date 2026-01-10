@@ -462,6 +462,7 @@ _C.SOLVER.TEST_PERIOD = 0
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
 _C.SOLVER.IMS_PER_BATCH = 8
+_C.SOLVER.IMS_PER_BATCH_SUN360 = 2
 
 _C.SOLVER.STEP_LR_SIZE = 0
 
@@ -477,6 +478,7 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
 _C.TEST.IMS_PER_BATCH = 1
+_C.TEST.IMS_PER_BATCH_SUN360 = 1
 # Number of detections per image
 _C.TEST.DETECTIONS_PER_IMG = 25
 

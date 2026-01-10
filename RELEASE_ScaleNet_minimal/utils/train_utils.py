@@ -175,6 +175,7 @@ def load_densenet(model, ckpt_name, checkpoints_folder, opt, old=False):
 def sum_bbox_ratios(writer, vt_loss_allBoxes_list, tid, prefix, title):
     vt_loss_allBoxes_np = torch.stack(vt_loss_allBoxes_list).cpu().data.numpy().copy()
     vt_loss_allBoxes_np.sort()
+    # NOTE: This function uses the writer (only call with rank = 0)
     thres_ratio_dict = summary_thres(
         vt_loss_allBoxes_np,
         [0.01, 0.02, 0.03, 0.05, 0.1, 0.2, 0.3, 0.5, 0.8, 1.0],
@@ -193,7 +194,7 @@ def reduce_loss_dict(loss_dict, mark="", if_print=False, logger=None):
     """
     world_size = get_world_size()  # NUM of GPUs
     if world_size < 2:
-        logger.debug("[train_utils] world_size==%d; not reduced!" % world_size)
+        # logger.debug("[train_utils] world_size==%d; not reduced!" % world_size)
         return loss_dict
     with torch.no_grad():
         loss_names = []
