@@ -3,7 +3,7 @@ import json
 import os
 import random
 from glob import glob
-from multiprocessing import Pool
+import multiprocessing as mp
 
 import numpy as np
 import panorama_cropping_dataset_generation.image_extraction as image_extraction
@@ -227,7 +227,11 @@ def process(im_path):
     if os.path.isfile(metadata_path):
         return
 
-    im = imread(im_path)
+    try:
+        im = imread(im_path)
+    except:
+        print("Error while loading: ", im_path)
+        raise ValueError
     if len(im.shape) == 2:
         im = np.stack((im,) * 3, axis=-1)
     else:
@@ -263,11 +267,11 @@ if __name__ == "__main__":
     ext = args.ext
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(os.path.join(output_dir, "debug"), exist_ok=True)
-    with DispDebug("Listing SUN360..."):
+    with DispDebug("Listing..."):
         images = glob(input_dir + f"/**/*.{ext}", recursive=True)
 
     random.seed(31415926)
     random.shuffle(images)
-    with Pool(processes=4, initializer=randomize) as pool:
+    with mp.Pool(processes=mp.cpu_count(), initializer=randomize) as pool:
         for _ in list(tqdm(pool.imap_unordered(process, images), total=len(images))):
             pass
