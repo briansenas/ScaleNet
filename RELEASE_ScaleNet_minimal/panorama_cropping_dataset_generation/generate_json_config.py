@@ -43,6 +43,8 @@ if __name__ == "__main__":
     print("Using the glob pattern: ", pattern)
     images = glob.glob(pattern)
     print("Number of files found:", len(images))
+    images = list(filter(lambda x: "debug" not in x, images))
+    print("Filter debug files: ", len(images))
     if not args.split:
         random.shuffle(images)
         with open(
