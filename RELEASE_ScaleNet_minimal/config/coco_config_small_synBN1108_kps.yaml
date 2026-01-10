@@ -10,6 +10,7 @@ MODEL:
 
   BACKBONE:
     CONV_BODY: "FBNet"
+
   FBNET:
     ARCH: "cham_v1a"
     BN_TYPE: "bn"
@@ -60,7 +61,7 @@ MODEL:
   LOSS:
     VT_LOSS_CLAMP: 2.
 DATALOADER:
-  SIZE_DIVISIBILITY: 32
+  SIZE_DIVISIBILITY: 0
   NUM_WORKERS: 4
 DATA:
   COCO:
@@ -73,12 +74,14 @@ SOLVER:
   WEIGHT_DECAY: 0.0001
   STEPS: (60000, 80000)
   MAX_ITER: 90000
-  IMS_PER_BATCH: 24 # should be divisible by the number of GPUs
+  IMS_PER_BATCH: 12 # should be divisible by the number of GPUs
+  IMS_PER_BATCH_SUN360: 4 # should be divisible by the number of GPUs
   PERSON_WEIGHT: 0.01
 TEST:
-  IMS_PER_BATCH: 24 # should be divisible by the number of GPUs(?)
+  IMS_PER_BATCH: 12 # should be divisible by the number of GPUs(?)
+  IMS_PER_BATCH_SUN360: 4 # should be divisible by the number of GPUs(?)
 INPUT:
-  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+  MIN_SIZE_TRAIN: (600, )
   MAX_SIZE_TRAIN: 800
   MIN_SIZE_TEST: 600
   MAX_SIZE_TEST: 800
