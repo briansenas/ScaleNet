@@ -54,6 +54,8 @@ def show_cam_bbox(
     # plt.subplot(4, 1, [1, 2, 3])
     gs = fig.add_gridspec(4, 2)
     ax1 = fig.add_subplot(gs[0:3, :])
+    plt.tight_layout()
+    plt.axis('off')
     plt.imshow(img)
     if "yc_est_list" in input_dict:
         add_yc_list_str = "(%s)" % (
@@ -79,22 +81,25 @@ def show_cam_bbox(
     else:
         add_v0_list_str = ""
 
-    plt.title(
-        "[%s-%d-%s] H_camFit=%.2f, H_camEst=%.2f %s; f_est=%.2f mm %s; pitch=%.2f degree; %s"
-        % (
-            input_dict["task_name"].split("_")[0],
-            input_dict["tid"],
-            input_dict["im_filename"][-6:],
-            input_dict["yc_fit"],
-            input_dict["yc_est"],
-            add_yc_list_str,
-            input_dict["f_est_mm"],
-            add_fmm_list_str,
-            input_dict["pitch_est_angle"],
-            add_v0_list_str,
-        ),
-        fontsize="small",
-    )
+    if "title" in input_dict:
+        plt.title(input_dict["title"])
+    else:
+        plt.title(
+            "[%s-%d-%s] H_camFit=%.2f, H_camEst=%.2f %s; f_est=%.2f mm %s; pitch=%.2f degree; %s"
+            % (
+                input_dict["task_name"].split("_")[0],
+                input_dict["tid"],
+                input_dict["im_filename"][-6:],
+                input_dict["yc_fit"],
+                input_dict["yc_est"],
+                add_yc_list_str,
+                input_dict["f_est_mm"],
+                add_fmm_list_str,
+                input_dict["pitch_est_angle"],
+                add_v0_list_str,
+            ),
+            fontsize="small",
+        )
 
     W = input_dict["W"]
     H = input_dict["H"]
@@ -364,7 +369,7 @@ def show_cam_bbox(
 
     if if_save:
         vis_path = os.path.join(save_path, save_name + ".jpg")
-        fig.savefig(vis_path)
+        fig.savefig(vis_path, bbox_inches="tight")
         if idx_sample == 0:
             print("Vis saved to " + vis_path)
 
@@ -623,7 +628,7 @@ def blender_render(
     pick=-1,
     grid=False,
     *,
-    blender_path="/snap/bin/blender",
+    blender_path="snap/blender",
     current_dir=".",
 ):
     assert render_type in ["chair", "cylinder"]

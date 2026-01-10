@@ -384,16 +384,16 @@ if __name__ == "__main__":
         obj_bounds = getObjBoundaries(new_obj)
         print("---obj_bounds", obj_bounds)
 
-        print("Original scale", new_obj.scale)
-        print("Original dimensions", new_obj.dimensions)
-        new_obj.dimensions = new_obj.dimensions * bbox_h
-        print(
-            "After scale, dimensions, bbox_h",
-            new_obj.scale,
-            new_obj.dimensions,
-            bbox_h,
-        )
-        print("After location", new_obj.location)
+        # print("Original scale", new_obj.scale)
+        # print("Original dimensions", new_obj.dimensions)
+        # new_obj.dimensions = new_obj.dimensions * bbox_h
+        # print(
+        #     "After scale, dimensions, bbox_h",
+        #     new_obj.scale,
+        #     new_obj.dimensions,
+        #     bbox_h,
+        # )
+        # print("After location", new_obj.location)
 
         # Set on ground, useful if scaled
         vertices = getVertices(new_obj, world=True)

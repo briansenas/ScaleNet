@@ -42,7 +42,11 @@ def check_eval_COCO(
                 epoch=epoch,
             )
             synchronize()
-            if isinstance(scheduler, ReduceLROnPlateau) and rank == 0:
+            if (
+                isinstance(scheduler, ReduceLROnPlateau)
+                and rank == 0
+                and writer is not None
+            ):
                 step_metrics = return_dict_epoch["eval_loss_sum_coco"]
                 logger.info(
                     green(
@@ -63,13 +67,13 @@ def check_eval_COCO(
                 scheduler.step(step_metrics)
                 is_better = scheduler.num_bad_epochs == 0
                 writer.add_scalar(
-                    "training/scheduler-num_bad_epochs",
+                    "training/scheduler-num-bad-epochs",
                     scheduler.num_bad_epochs,
                     tid,
                 )
                 writer.add_scalar("training/scheduler-best", scheduler.best, tid)
                 writer.add_scalar(
-                    "training/scheduler-last_epoch",
+                    "training/scheduler-last-epoch",
                     scheduler.last_epoch,
                     tid,
                 )
@@ -90,11 +94,11 @@ def check_eval_SUN360(
     device,
     logger,
     scheduler,
-    epochs_evaled,
+    epochs_evalued,
 ):
     is_better = False
     # if epoch != 0 and epoch != epoch_start and not opt.not_val and epoch not in epochs_evaled:
-    if not opt.not_val and epoch not in epochs_evaled:
+    if not opt.not_val and epoch not in epochs_evalued:
         if rank == 0:
             logger.info(green("Evaluating on SUN360....."))
         model.eval()
@@ -111,7 +115,11 @@ def check_eval_SUN360(
                 opt,
             )
             synchronize()
-            if isinstance(scheduler, ReduceLROnPlateau) and rank == 0:
+            if (
+                isinstance(scheduler, ReduceLROnPlateau)
+                and rank == 0
+                and writer is not None
+            ):
                 print(
                     return_dict_epoch.keys(),
                     scheduler,
@@ -136,18 +144,20 @@ def check_eval_SUN360(
                         ),
                     )
                     writer.add_scalar(
-                        "training/scheduler-num_bad_epochs",
+                        "training/sun360-scheduler-num-bad-epochs",
                         scheduler.num_bad_epochs,
                         tid,
                     )
-                    writer.add_scalar("training/scheduler-best", scheduler.best, tid)
                     writer.add_scalar(
-                        "training/scheduler-last_epoch",
+                        "training/sun360-scheduler-best", scheduler.best, tid
+                    )
+                    writer.add_scalar(
+                        "training/sun360-scheduler-last_epoch",
                         scheduler.last_epoch,
                         tid,
                     )
-                    writer.add_scalar("training/scheduler-epoch", epoch, tid)
-        epochs_evaled.append(epoch)
+                    writer.add_scalar("training/sun360-scheduler-epoch", epoch, tid)
+        epochs_evalued.append(epoch)
         model.train()
 
     return is_better
