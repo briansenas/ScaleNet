@@ -25,7 +25,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from utils.checkpointer import DetectronCheckpointer
 from utils.data_utils import make_data_loader
-from utils.eval_save_utils_combine_RCNNONly import check_save
+from utils.eval_save_utils_combine_RCNNONly import check_eval_SUN360, check_save
 from utils.logger import printer as PRINTER
 from utils.logger import setup_logger
 from utils.train_utils import reduce_loss_dict
@@ -239,6 +239,7 @@ def train(rank, opt):
         desc="Epoch",
         position=1,
     )
+    epochs_evalued = []
     skip_for = tid_start % evaluate_at_every
     for i, pano_data in zip(
         range(0, opt.iter),
@@ -371,16 +372,18 @@ def train(rank, opt):
         if i != 0 and tid % (evaluate_at_every) == 0:
             print("Evaluate the model")
             epoch += 1
-            model.eval()
-            eval_epoch_cvpr_RCNN(
-                model=model,
-                validation_loader=eval_loader_SUN360,
-                epoch=epoch,
+            is_better = check_eval_SUN360(
                 tid=tid,
-                device=device,
-                writer=writer,
-                logger=logger,
+                epoch=epoch,
+                rank=rank,
                 opt=opt,
+                model=model,
+                eval_loader=eval_loader_SUN360,
+                writer=writer,
+                device=device,
+                logger=logger,
+                scheduler=scheduler,
+                epochs_evalued=epochs_evalued,
             )
             model.train()
             check_save(

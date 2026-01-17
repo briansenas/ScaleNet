@@ -120,23 +120,23 @@ def check_eval_SUN360(
                 and rank == 0
                 and writer is not None
             ):
-                print(
-                    return_dict_epoch.keys(),
-                    scheduler,
-                    isinstance(scheduler, ReduceLROnPlateau),
-                    "eval_loss_sum_SUN360" in return_dict_epoch,
-                    scheduler.best,
-                )
+                # print(
+                #     return_dict_epoch.keys(),
+                #     scheduler,
+                #     isinstance(scheduler, ReduceLROnPlateau),
+                #     "eval_loss_sum_calib" in return_dict_epoch,
+                #     scheduler.best,
+                # )
                 if "SUN360RCNN" in opt.task_name:
                     scheduler.step(
-                        return_dict_epoch["eval_loss_sum_SUN360"],
+                        return_dict_epoch["eval_loss_sum_calib"],
                     )
                     is_better = scheduler.num_bad_epochs == 0
                     logger.info(
                         green(
                             "scheduler.step with loss_mean = %.2f, best = %.2f, bad = %d, patience = %d"
                             % (
-                                return_dict_epoch["eval_loss_sum_SUN360"],
+                                return_dict_epoch["eval_loss_sum_calib"],
                                 scheduler.best,
                                 scheduler.num_bad_epochs,
                                 scheduler.patience,
@@ -144,19 +144,19 @@ def check_eval_SUN360(
                         ),
                     )
                     writer.add_scalar(
-                        "training/sun360-scheduler-num-bad-epochs",
+                        "training/calib-scheduler-num-bad-epochs",
                         scheduler.num_bad_epochs,
                         tid,
                     )
                     writer.add_scalar(
-                        "training/sun360-scheduler-best", scheduler.best, tid
+                        "training/calib-scheduler-best", scheduler.best, tid
                     )
                     writer.add_scalar(
-                        "training/sun360-scheduler-last_epoch",
+                        "training/calib-scheduler-last_epoch",
                         scheduler.last_epoch,
                         tid,
                     )
-                    writer.add_scalar("training/sun360-scheduler-epoch", epoch, tid)
+                    writer.add_scalar("training/calib-scheduler-epoch", epoch, tid)
         epochs_evalued.append(epoch)
         model.train()
 
