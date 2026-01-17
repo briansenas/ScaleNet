@@ -1,4 +1,6 @@
 slurmReports/
+config/*.yaml
+config/*.json
 *.pyc
 *.zip
 summary/
