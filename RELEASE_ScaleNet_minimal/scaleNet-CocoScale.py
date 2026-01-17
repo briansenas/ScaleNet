@@ -298,12 +298,14 @@ def train(rank, opt):
         total=opt.iter,
         initial=0,
         desc="Training",
+        disable=rank != 0,
     )
     eval_bar = tqdm(
         total=evaluate_at_every,
         initial=0,
         desc="Epoch",
         position=1,
+        disable=rank != 0,
     )
     skip_for = tid_start % evaluate_at_every
     for i, coco_data in zip(

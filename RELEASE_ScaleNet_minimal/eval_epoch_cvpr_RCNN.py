@@ -70,7 +70,7 @@ def eval_epoch_cvpr_RCNN(
     return_dict_epoch = {}
 
     with torch.no_grad():
-        with tqdm(validation_loader, desc=f"Ep.{epoch} Eval") as t:
+        with tqdm(validation_loader, desc=f"Ep.{epoch} Eval", disable=rank != 0) as t:
             for i, (
                 im_paths_SUN360,
                 inputSUN360_Image_yannickTransform_list,

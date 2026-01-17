@@ -232,12 +232,14 @@ def train(rank, opt):
         total=opt.iter,
         initial=0,
         desc="Training",
+        disable=rank != 0,
     )
     eval_bar = tqdm(
         total=evaluate_at_every,
         initial=0,
         desc="Epoch",
         position=1,
+        disable=rank != 0,
     )
     epochs_evalued = []
     skip_for = tid_start % evaluate_at_every
@@ -385,7 +387,6 @@ def train(rank, opt):
                 scheduler=scheduler,
                 epochs_evalued=epochs_evalued,
             )
-            model.train()
             check_save(
                 rank=rank,
                 tid=tid,

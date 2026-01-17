@@ -67,7 +67,7 @@ def eval_epoch_combine_RCNNOnly(
     if_vis_kps = True
 
     with torch.no_grad():
-        with tqdm(eval_loader, desc=f"Ep.{epoch} Eval") as t:
+        with tqdm(eval_loader, desc=f"Ep.{epoch} Eval", disable=rank != 0) as t:
             for i, (
                 _,
                 inputCOCO_Image_maskrcnnTransform_list,
