@@ -449,8 +449,8 @@ def show_box_kps(
         )
     input_dict_show["result_list_pose"] = result_list
     target_list = [input_dict_show["target_maskrcnnTransform_list"]]
-    for _, (_, result) in enumerate(zip(target_list, result_list)):
-        # bboxes_gt = target.get_field('boxlist_ori').convert("xywh").bbox.numpy()
+    for idx, (target, result) in enumerate(zip(target_list, result_list)):
+        bboxes_gt = target.get_field('boxlist_ori').convert("xywh").bbox.numpy()
         if if_show == False:
             plt.ioff()
         fig = plt.figure(figsize=(10 * figzoom, 10 * figzoom))
@@ -458,6 +458,13 @@ def show_box_kps(
         plt.title(
             "[%d-%s]" % (input_dict_show["tid"], input_dict_show["im_filename"][-6:]),
         )
+        ax = plt.gca()
+        for bbox_gt in bboxes_gt:
+            # print(bbox_gt)
+            rect = Rectangle((bbox_gt[0], bbox_gt[1]), bbox_gt[2], bbox_gt[3], linewidth=2, edgecolor='lime', facecolor='none')
+            ax.add_patch(rect)
+        plt.title('%d'%idx)
+        plt.show()
         if if_show and not if_return:
             plt.show()
             if if_pause:

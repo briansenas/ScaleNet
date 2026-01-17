@@ -33,7 +33,7 @@ _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
 # the path in paths_catalog. Else, it will use it as the specified absolute
 # path
 _C.MODEL.WEIGHT = ""
-_C.MODEL.RCNN_WEIGHT = "SUN360RCNN/checkpointer_epoch0055_iter0136785.pth"
+_C.MODEL.RCNN_WEIGHT = "SUN360RCNN"
 _C.MODEL.RCNN_WEIGHT_BACKBONE = "SUN360RCNN"
 _C.MODEL.RCNN_WEIGHT_BOX_HEAD = "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
 _C.MODEL.RCNN_WEIGHT_KPS_HEAD = (

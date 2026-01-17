@@ -207,7 +207,7 @@ def eval_epoch_cvpr_RCNN(
 
                 if rank == 0 and writer is not None:
                     writer.add_scalar(
-                        "loss_eval/eval_loss_sum_SUN360",
+                        "loss_eval/eval_loss_sum_calib",
                         eval_loss_sum_SUN360,
                         tid,
                     )
@@ -252,7 +252,7 @@ def eval_epoch_cvpr_RCNN(
                     )
 
                     return_dict_epoch.update(
-                        {"eval_loss_sum_SUN360": eval_loss_sum_SUN360},
+                        {"eval_loss_sum_calib": eval_loss_sum_SUN360},
                     )
 
                     # writer.flush()

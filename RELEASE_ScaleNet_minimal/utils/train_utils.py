@@ -542,3 +542,26 @@ def process_writer(opt, tid, rank, writer, ctx, logger, prefix: str = "train"):
                 eval_loss_bbox_reg_mean / (opt.weight_kps + 1e-8),
                 tid,
             )
+
+
+def process_sun360_losses(
+    tid,
+    loss_dict: dict,
+    ctx: dict,
+    logger,
+):
+    loss_horizon = ctx["loss_horizon"]
+    loss_pitch = ctx["loss_pitch"]
+    loss_roll = ctx["loss_roll"]
+    loss_vfov = ctx["loss_vfov"]
+    loss_dict_reduced = reduce_loss_dict(
+        loss_dict,
+        mark=tid,
+        logger=logger,
+    )
+    ctx["total_loss"].append(sum(loss for loss in loss_dict.values()).item())
+    loss_horizon.append(loss_dict_reduced["loss_horizon"].item())
+    loss_pitch.append(loss_dict_reduced["loss_pitch"].item())
+    loss_roll.append(loss_dict_reduced["loss_roll"].item())
+    loss_vfov.append(loss_dict_reduced["loss_vfov"].item())
+    return ctx

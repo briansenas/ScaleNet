@@ -36,7 +36,7 @@ class RCNN_only(nn.Module):
         self.RCNN = GeneralizedRCNNRuiMod_cameraCalib(
             cfg,
             opt,
-            modules_not_build=["roi_heads"],
+            modules_not_build=["roi_h_heads"],
             logger=self.logger,
             rank=self.rank,
         )
@@ -46,29 +46,46 @@ class RCNN_only(nn.Module):
         checkpointer = DetectronCheckpointer(
             self.opt,
             self.RCNN,
+            checkpoint_all_dir=self.opt.checkpoints_folder,
             save_dir=save_dir,
             logger=self.logger,
             if_print=self.if_print,
         )
-        _ = checkpointer.load(
-            self.cfg.MODEL.RCNN_WEIGHT_BACKBONE,
-            only_load_kws=["backbone"],
-        )
+        # Load backbone
+        if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_BACKBONE:
+            _ = checkpointer.load(
+                task_name=self.cfg.MODEL.RCNN_WEIGHT_BACKBONE,
+                only_load_kws=["backbone"],
+            )
+        else:
+            _ = checkpointer.load(
+                f=self.cfg.MODEL.RCNN_WEIGHT_BACKBONE,
+                only_load_kws=["backbone"],
+            )
 
-        skip_kws_CLS_HEAD = [
-            "classifier_%s.predictor" % cls_name for cls_name in self.cls_names
-        ]
-        replace_kws_CLS_HEAD = [
-            "classifier_heads.classifier_%s" % cls_name for cls_name in self.cls_names
-        ]
-        replace_with_kws_CLS_HEAD = ["roi_heads.box"] * 5
-        _ = checkpointer.load(
-            self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD,
-            only_load_kws=replace_kws_CLS_HEAD,
-            skip_kws=skip_kws_CLS_HEAD,
-            replace_kws=replace_kws_CLS_HEAD,
-            replace_with_kws=replace_with_kws_CLS_HEAD,
-        )
+        # Load camera classifiers except camH
+        if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD:
+            _ = checkpointer.load(
+                task_name=self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD,
+                only_load_kws=["classifier_heads"],
+                skip_kws=["camH"],
+            )
+        else:
+            skip_kws_CLS_HEAD = [
+                "classifier_%s.predictor" % cls_name for cls_name in self.cls_names
+            ]
+            replace_kws_CLS_HEAD = [
+                "classifier_heads.classifier_%s" % cls_name
+                for cls_name in self.cls_names
+            ]
+            replace_with_kws_CLS_HEAD = ["roi_heads.box"] * len(self.cls_names)
+            _ = checkpointer.load(
+                f=self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD,
+                only_load_kws=replace_kws_CLS_HEAD,
+                skip_kws=skip_kws_CLS_HEAD,
+                replace_kws=replace_kws_CLS_HEAD,
+                replace_with_kws=replace_with_kws_CLS_HEAD,
+            )
 
     def turn_off_all_params(self):
         for name, param in self.named_parameters():
@@ -115,6 +132,8 @@ class RCNN_only(nn.Module):
 
     def forward(
         self,
+        # For compatibility with the new model
+        input_dict_misc=None,
         image_batch_list=None,
         list_of_bbox_list_cpu=None,
         list_of_oneLargeBbox_list=None,
