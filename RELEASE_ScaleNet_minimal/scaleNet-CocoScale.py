@@ -1,10 +1,10 @@
 import datetime
 import argparse
-import inspect
 import os
-import random
 import sys
 from pathlib import Path
+import inspect
+import random
 
 import numpy as np
 import torch
@@ -29,13 +29,28 @@ from tqdm import tqdm
 from train_batch_combine_RCNNOnly_v5_pose_multiCat import train_batch_combine
 from utils.checkpointer import DetectronCheckpointer
 from utils.data_utils import make_data_loader
-from utils.eval_save_utils_combine_RCNNONly import check_save
+from utils.eval_save_utils_combine_RCNNONly import check_eval_COCO, check_save
 from utils.logger import printer as PRINTER
 from utils.logger import setup_logger
 from utils.model_utils import get_bins_combine
 from utils.train_utils import cycle, process_losses, process_writer
 from utils.utils_misc import colored
 from collections import defaultdict
+
+
+def logger_report(epoch, tid, toreport, logger):
+    loss_vt = toreport["vt"]
+    calib_loss = toreport["calib"]
+    loss_detection = toreport["detection"]
+    loss_kp = toreport["kp"]
+    total_loss = toreport["loss"]
+    loss_person = toreport["person"]
+    logger.info(
+        f"Epoch {epoch} Iter {tid}: Loss VT = {loss_vt:.4f} "
+        + f"Loss Person = {loss_person:.4f} Calib Loss = {calib_loss:.4f} "
+        + f"Detection Loss = {loss_detection:.4f} Kps Loss = {loss_kp:.4f} "
+        + f"Total Loss = {total_loss:.4f} ",
+    )
 
 
 def train(rank, opt):
@@ -257,6 +272,7 @@ def train(rank, opt):
     tid = 0
 
     epoch = 0
+    epochs_evalued = []
     ctx = defaultdict(list)
     loss_func = torch.nn.L1Loss()
     if opt.distributed:
@@ -264,13 +280,13 @@ def train(rank, opt):
     else:
         rank = 0
     patience = 0
-    logger.info(
-        f"Starting at iteration {tid_start} to complete {opt.iter} for a total of {opt.iter - tid_start}.",
-    )
     evaluate_at_every = (
-        len(training_loader_coco_vis.batch_sampler.batch_sampler)
-        if not opt.debug
-        else 1
+        len(train_loader_SUN360.batch_sampler.batch_sampler)
+        if opt.evaluate_every == -1
+        else int(opt.evaluate_every)
+    )
+    logger.info(
+        f"Starting at iteration {0}, batch skipping first {tid_start % evaluate_at_every},  to complete {opt.iter} for a total of {opt.iter - tid_start} actual trained batches.",
     )
     if not opt.not_val:
         logger.info(
@@ -280,22 +296,30 @@ def train(rank, opt):
     synchronize()
     train_bar = tqdm(
         total=opt.iter,
-        initial=tid_start,
+        initial=0,
         desc="Training",
     )
     eval_bar = tqdm(
         total=evaluate_at_every,
-        initial=tid_start % evaluate_at_every,
+        initial=0,
         desc="Epoch",
         position=1,
     )
+    skip_for = tid_start % evaluate_at_every
     for i, coco_data in zip(
-        range(0, opt.iter - tid_start),
+        range(0, opt.iter),
         training_loader_coco_vis,
     ):
         train_bar.update(1)
         eval_bar.update(1)
+        tid = i
+        if i < skip_for:
+            # SequentialBatch logic -- must have the seed set correctly
+            # Skip until we find the same batch as the last iteration (only within an epoch)
+            # Worst case are the last iterations of an epoch -- O(n)
+            continue
         optimizer.zero_grad()
+        is_better = False
         (
             _,
             inputCOCO_Image_maskrcnnTransform_list,
@@ -311,8 +335,6 @@ def train(rank, opt):
             target_maskrcnnTransform_list,
             labels_list,
         ) = coco_data
-        tid = i + tid_start
-        is_better = False
         input_dict = {
             "inputCOCO_Image_maskrcnnTransform_list": inputCOCO_Image_maskrcnnTransform_list,
             "W_batch_array": W_batch_array,
@@ -374,14 +396,14 @@ def train(rank, opt):
             if_SUN360=opt.train_cameraCls,
             if_vis=if_vis,
         )
-        loss_vt = loss_dict.get("loss_vt", 0.0)
-        loss_person = loss_dict.get("loss_person", 0.0)
+        loss_vt = loss_dict.get("loss_vt", torch.tensor([0.0]))
+        loss_person = loss_dict.get("loss_person", torch.tensor([0.0]))
         loss_detection = (
             loss_dict["loss_bbox_cls"] + loss_dict["loss_bbox_reg"]
             if opt.est_bbox
-            else 0.0
+            else torch.tensor([0.0])
         )
-        loss_kp = loss_dict["loss_kp"] if opt.est_kps else 0.0
+        loss_kp = loss_dict["loss_kp"] if opt.est_kps else torch.tensor([0.0])
         calib_loss = (
             (
                 loss_dict["loss_horizon"]
@@ -390,21 +412,26 @@ def train(rank, opt):
                 + loss_dict["loss_vfov"]
             )
             if opt.train_cameraCls
-            else 0.0
+            else torch.tensor([0.0])
         )
         total_loss = sum(loss for loss in loss_dict.values())
+        toreport = {
+            "loss": total_loss.item(),
+            "calib": calib_loss.item(),
+            "detection": loss_detection.item(),
+            "kp": loss_kp.item(),
+            "vt": loss_vt.item(),
+            "person": loss_person.item(),
+        }
         try:
             total_loss.backward()
         except Exception as e:
             # NOTE: In case backward fails, see what loss was 0.0
-            logger.info(
-                f"Epoch {epoch} Iter {tid}: Loss VT = {loss_vt:.4f} "
-                + f"Loss Person = {loss_person:.4f} Calib Loss = {calib_loss:.4f} "
-                + f"Detection Loss = {loss_detection:.4f} Kps Loss = {loss_kp:.4f} "
-                + f"Total Loss = {total_loss:.4f} ",
-            )
+            logger_report(epoch, tid, toreport, logger)
             logger.error(im_filename)
             raise e
+        train_bar.set_postfix(**toreport)
+        train_bar.update()
         synchronize()
         optimizer.step()
         if tid % opt.summary_every_iter == 0:
@@ -426,12 +453,7 @@ def train(rank, opt):
                 logger,
                 prefix="train",
             )
-            logger.info(
-                f"Epoch {epoch} Iter {tid}: Loss VT = {loss_vt:.4f} "
-                + f"Loss Person = {loss_person:.4f} Calib Loss = {calib_loss:.4f} "
-                + f"Detection Loss = {loss_detection:.4f} Kps Loss = {loss_kp:.4f} "
-                + f"Total Loss = {total_loss:.4f} ",
-            )
+            logger_report(epoch, tid, toreport, logger)
         if opt.save_every_iter != 0 and tid % opt.save_every_iter == 0 and i > 0:
             logger.info(f"Checking to save at {tid}")
             check_save(
@@ -449,21 +471,22 @@ def train(rank, opt):
         if i != 0 and tid % (evaluate_at_every) == 0:
             print("Evaluate the model")
             epoch += 1
-            # is_better = check_eval_COCO(
-            #     tid=tid,
-            #     epoch=epoch,
-            #     rank=rank,
-            #     opt=opt,
-            #     model=model,
-            #     eval_loader=eval_loader_coco_vis,
-            #     writer=writer,
-            #     device=device,
-            #     bins=bins,
-            #     logger=logger,
-            #     scheduler=scheduler,
-            #     epochs_evalued=epochs_evalued,
-            # )
-
+            is_better = check_eval_COCO(
+                tid=tid,
+                epoch=epoch,
+                rank=rank,
+                opt=opt,
+                model=model,
+                eval_loader=eval_loader_coco_vis,
+                writer=writer,
+                device=device,
+                bins=bins,
+                logger=logger,
+                scheduler=scheduler,
+                epochs_evalued=epochs_evalued,
+            )
+            model.eval()
+            # So that we can check if our calib model is drifting
             eval_epoch_cvpr_RCNN(
                 model=model,
                 validation_loader=eval_loader_SUN360,
@@ -474,6 +497,7 @@ def train(rank, opt):
                 logger=logger,
                 opt=opt,
             )
+            model.train()
 
             check_save(
                 rank=rank,
@@ -493,12 +517,7 @@ def train(rank, opt):
                 patience = 0
             if patience >= earlystop:
                 logger.info(f"[EarlyStopping] No improvements over {patience} epochs")
-                logger.info(
-                    f"Epoch {epoch} Iter {tid}: Loss VT = {loss_vt:.4f} "
-                    + f"Loss Person = {loss_person:.4f} Calib Loss = {calib_loss:.4f} "
-                    + f"Detection Loss = {loss_detection:.4f} Kps Loss = {loss_kp:.4f} "
-                    + f"Total Loss = {total_loss:.4f} ",
-                )
+                logger_report(epoch, tid, toreport, logger)
                 patience = 0
                 break
 
@@ -538,6 +557,7 @@ if __name__ == "__main__":
         help="set to 0 to save ONLY at the end of each epoch",
     )
     parser.add_argument("--summary-every-iter", type=int, default=100, help="")
+    parser.add_argument("--evaluate-every", type=int, default=5000, help="")
     parser.add_argument(
         "--iter",
         type=int,
@@ -555,8 +575,6 @@ if __name__ == "__main__":
         action="store_true",
         help="Do not validate during training",
     )
-    parser.add_argument("--not-vis", action="store_true", help="")
-    parser.add_argument("--not-vis-SUN360", action="store_true", help="")
     parser.add_argument(
         "--save-every-epoch",
         type=int,
@@ -609,12 +627,8 @@ if __name__ == "__main__":
     parser.add_argument("--reset-lr", action="store_true", help="")  # NOT working yet
     parser.add_argument("--reset-iter", action="store_true", help="")  # NOT working yet
 
-    # Device
-    parser.add_argument("--cpu", action="store_true", help="Force training on CPU")
-
     # DEBUG
     parser.add_argument("--debug", action="store_true", help="Debug eval")
-    parser.add_argument("--debug-memory", action="store_true", help="Debug eval")
 
     # Mask R-CNN
     # Modules
@@ -717,7 +731,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--calib-file",
-        default="config/train_crops_dataset_cvpr_myDistWider.json",
+        default="config/pano360_crops_dataset_cvpr_myDistWider_train.json",
         metavar="FILE",
         help="path to config file",
         type=str,
