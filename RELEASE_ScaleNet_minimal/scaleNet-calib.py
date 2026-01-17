@@ -19,7 +19,6 @@ from maskrcnn_rui.config import cfg as CFG
 from maskrcnn_rui.data.transforms import build_transforms_maskrcnn
 from maskrcnn_rui.utils.comm import get_rank, synchronize
 from models.model_RCNN_only import RCNN_only
-from eval_epoch_cvpr_RCNN import eval_epoch_cvpr_RCNN
 from tensorboardX import SummaryWriter
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
@@ -104,12 +103,7 @@ def train(rank, opt):
 
     model.to(rank)
     model.init_restore()
-    model = DDP(
-        model,
-        device_ids=[rank],
-        broadcast_buffers=False,
-        find_unused_parameters=True,
-    )
+    model = DDP(model, device_ids=[rank], broadcast_buffers=False)
     optimizer = optim.Adam(
         model.parameters(),
         lr=CFG.SOLVER.BASE_LR,
@@ -221,10 +215,6 @@ def train(rank, opt):
     logger.info(
         f"Starting at iteration {0}, batch skipping first {tid_start % evaluate_at_every},  to complete {opt.iter} for a total of {opt.iter - tid_start} actual trained batches.",
     )
-    if not opt.not_val:
-        logger.info(
-            f"Evaluating at every {evaluate_at_every} iteration",
-        )
     loss_func = nn.CrossEntropyLoss()
     model.train()
     synchronize()
@@ -320,12 +310,7 @@ def train(rank, opt):
             "loss_roll": loss_roll,
             "loss_vfov": loss_vfov,
         }
-        loss_dict_reduced = reduce_loss_dict(
-            loss_dict,
-            mark=i,
-            logger=logger,
-        )
-        loss_reduced = sum(loss for loss in loss_dict_reduced.values())
+        loss_reduced = sum(loss for loss in loss_dict.values())
         toreport = {
             "loss": loss_reduced.item(),
             "horizon": loss_horizon.item(),
@@ -338,7 +323,7 @@ def train(rank, opt):
         loss_reduced.backward()
         synchronize()
         optimizer.step()
-        if tid % opt.summary_every_iter == 0:
+        if rank == 0 and tid % opt.summary_every_iter == 0:
             ctx = process_sun360_losses(
                 tid,
                 loss_dict,

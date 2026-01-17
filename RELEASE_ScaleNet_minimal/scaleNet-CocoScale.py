@@ -500,7 +500,6 @@ def train(rank, opt):
                 opt=opt,
             )
             model.train()
-
             check_save(
                 rank=rank,
                 tid=tid,

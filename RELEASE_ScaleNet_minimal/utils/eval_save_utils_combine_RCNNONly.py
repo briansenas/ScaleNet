@@ -159,7 +159,6 @@ def check_eval_SUN360(
                     writer.add_scalar("training/calib-scheduler-epoch", epoch, tid)
         epochs_evalued.append(epoch)
         model.train()
-
     return is_better
 
 

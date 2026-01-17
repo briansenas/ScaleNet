@@ -7,6 +7,7 @@ import torch
 import torch.distributed as dist
 import utils.vis_utils as vis_utils
 from maskrcnn_rui.engine.inference import _accumulate_predictions_from_multiple_gpus
+from maskrcnn_benchmark.utils.comm import synchronize
 from maskrcnn_rui.engine.inference import _dict_to_list
 from tqdm import tqdm
 from train_batch_combine_RCNNOnly_v5_pose_multiCat import train_batch_combine
@@ -224,7 +225,7 @@ def eval_epoch_combine_RCNNOnly(
 
                 if max_iter != -1 and i > max_iter:
                     break
-    # synchronize()
+    synchronize()
 
     if if_loss:
         im_filename_list = _accumulate_predictions_from_multiple_gpus(
