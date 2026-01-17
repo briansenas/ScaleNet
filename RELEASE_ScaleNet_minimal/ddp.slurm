@@ -3,9 +3,9 @@
 #SBATCH --partition dios         # Cola para ejecutar
 #SBATCH --nodelist atenea        # Nodo en concreto
 #SBATCH --nodes=1                # node count
-#SBATCH --ntasks-per-node=2      # total number of tasks per node
-#SBATCH --gres=gpu:2             # number of allocated gpus per node
-#SBATCH --time=05:00:00          # total run time limit (HH:MM:SS)
+#SBATCH --ntasks-per-node=3      # total number of tasks per node
+#SBATCH --gres=gpu:3             # number of allocated gpus per node
+#SBATCH --time=24:00:00          # total run time limit (HH:MM:SS)
 #SBATCH --output=./slurmReports/output.%a.out # STDOUT
 
 export MASTER_PORT=$(expr 10000 + $(echo -n $SLURM_JOBID | tail -c 4))
@@ -23,5 +23,11 @@ eval "$(conda shell.bash hook)"
 conda activate /mnt/homeGPU/bsena/ScaleNet/.venv
 export TFHUB_CACHE_DIR=.
 
-srun python scaleNet-CocoScale.py --task-name KPSBBOX --reset-scheduler --reset-lr --reset-iter --est-bbox --est-kps --train-cameraCls --save-every-iter 100 --summary-every-iter 100 --iter 90000
-# srun python scaleNet-CocoScale.py --task-name KPSBBOX --est-bbox --est-kps --train-cameraCls --save-every-iter 100 --summary-every-iter 100 --iter 90000
+# Calibrate camera parameters first
+srun python scaleNet-calib.py --task-name SUN360RCNN-FT --resume 1109-0141-mm1_SUN360RCNN-HorizonPitchRollVfovNET_myDistNarrowerLarge1105_bs16on4_le1e-5_indeptClsHeads_synBNApex_valBS1_yannickTransformAug --save-every-iter 100 --summary-every-iter 250 --evaluate-every 2500 --iter 50000 --reset-iter --reset-scheduler --reset-lr --calib-file config/pano360_crops_dataset_cvpr_myDistWider_train.json
+# srun python scaleNet-calib.py --task-name  SUN360RCNN-FT --resume SUN360RCNN-FT --save-every-iter 100 --summary-every-iter 250 --evaluate-every 2500 --iter 50000 --calib-file config/pano360_crops_dataset_cvpr_myDistWider_train.json
+# Run the keypoint detection training phase
+# srun python scaleNet-CocoScale.py --task-name KPSBBOX --est-bbox --est-kps --train-cameraCls --reset-iter --reset-lr --reset-scheduler --save-every-iter 100 --summary-every-iter 250 --evaluate-every 2500 --iter 50000 --calib-file config/pano360_crops_dataset_cvpr_myDistWider_train.json
+# srun python scaleNet-CocoScale.py --task-name KPSBBOX --resume KPSBBOX --est-bbox --est-kps --train-cameraCls --save-every-iter 100 --summary-every-iter 250 --evaluate-every 2500 --iter 50000 --calib-file config/pano360_crops_dataset_cvpr_myDistWider_train.json
+# Run the height estimation height
+# srun python scaleNet-CocoScale.py --task-name ROIH --resume KPSBBOX --est-bbox --est-kps --train-cameraCls --train-roi-h --pointnet-camH --pointnet-camH-refine --pointnet-personH-refine --accu-model --loss-person-all-layers --num-layers 3 --reset-iter --reset-lr --reset-scheduler --save-every-iter 100 --summary-every-iter 250 --evaluate-every 2500 --iter 50000 --calib-file config/pano360_crops_dataset_cvpr_myDistWider_train.json
