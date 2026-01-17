@@ -92,12 +92,12 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
         # [Rui] PADDING
         # convert to an ImageList, ``padded`` so that it is divisible by cfg.DATALOADER.SIZE_DIVISIBILITY
         image_list = to_image_list(image_batch, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
-        if self.training:
-            self.printer.print(
-                "PADDED: image_list.tensors, image_list.image_sizes (before pad):",
-                image_list.tensors.shape,
-                image_list.image_sizes,
-            )
+        # if self.training:
+        #     self.printer.print(
+        #         "PADDED: image_list.tensors, image_list.image_sizes (before pad):",
+        #         image_list.tensors.shape,
+        #         image_list.image_sizes,
+        #     )
         image_list = image_list.to(self.device)
         return image_list, image_sizes_after_transform
 
