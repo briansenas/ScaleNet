@@ -1,37 +1,39 @@
-import datetime
-from statistics import mean
 import argparse
+import datetime
 import inspect
 import os
 import random
 import sys
+from collections import defaultdict
 from pathlib import Path
+from statistics import mean
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.nn as nn
 import torch.optim as optim
 from dataset_cvpr import my_collate_SUN360
 from dataset_cvpr import SUN360Horizon
 from maskrcnn_rui.config import cfg as CFG
 from maskrcnn_rui.data.transforms import build_transforms_maskrcnn
-from maskrcnn_rui.utils.comm import get_rank, synchronize
+from maskrcnn_rui.utils.comm import get_rank
+from maskrcnn_rui.utils.comm import synchronize
 from models.model_RCNN_only import RCNN_only
 from tensorboardX import SummaryWriter
+from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from utils.checkpointer import DetectronCheckpointer
 from utils.data_utils import make_data_loader
-from utils.eval_save_utils_combine_RCNNONly import check_eval_SUN360, check_save
+from utils.eval_save_utils_combine_RCNNONly import check_eval_SUN360
+from utils.eval_save_utils_combine_RCNNONly import check_save
 from utils.logger import printer as PRINTER
 from utils.logger import setup_logger
-from utils.train_utils import reduce_loss_dict
 from utils.model_utils import oneLargeBboxList
 from utils.train_utils import process_sun360_losses
+from utils.train_utils import reduce_loss_dict
 from utils.utils_misc import colored
-from collections import defaultdict
 
 
 def logger_report(epoch, tid, toreport, logger):
@@ -45,7 +47,7 @@ def logger_report(epoch, tid, toreport, logger):
         + f"Loss pitch = {loss_pitch:.4f} "
         + f"Loss vfov = {loss_vfov:.4f} "
         + f"Loss roll = {loss_roll:.4f} "
-        + f"Calib Loss = {loss_reduced:.4f} "
+        + f"Calib Loss = {loss_reduced:.4f} ",
     )
 
 
@@ -62,7 +64,10 @@ def train(rank, opt):
     opt.rank = rank
     world_size = int(os.environ["WORLD_SIZE"])
     dist.init_process_group(
-        "nccl", rank=rank, world_size=world_size, timeout=datetime.timedelta(seconds=30)
+        "nccl",
+        rank=rank,
+        world_size=world_size,
+        timeout=datetime.timedelta(seconds=30),
     )
     if rank == 0:
         print(f"Group initialized? {dist.is_initialized()}", flush=True)
@@ -111,7 +116,11 @@ def train(rank, opt):
         eps=1e-5,
     )
     scheduler = ReduceLROnPlateau(
-        optimizer, "min", factor=0.1, patience=20, cooldown=10
+        optimizer,
+        "min",
+        factor=0.1,
+        patience=20,
+        cooldown=10,
     )
     earlystop = 30
 
@@ -212,8 +221,9 @@ def train(rank, opt):
         if opt.evaluate_every == -1
         else int(opt.evaluate_every)
     )
+    skip_for = tid_start % len(train_loader_SUN360.batch_sampler.batch_sampler)
     logger.info(
-        f"Starting at iteration {0}, batch skipping first {tid_start % evaluate_at_every},  to complete {opt.iter} for a total of {opt.iter - tid_start} actual trained batches.",
+        f"Starting at iteration {0}, batch skipping first {skip_for},  to complete {opt.iter} for a total of {opt.iter - tid_start} actual trained batches.",
     )
     loss_func = nn.CrossEntropyLoss()
     model.train()
@@ -232,7 +242,6 @@ def train(rank, opt):
         disable=rank != 0,
     )
     epochs_evalued = []
-    skip_for = tid_start % evaluate_at_every
     for i, pano_data in zip(
         range(0, opt.iter),
         train_loader_SUN360,
@@ -323,24 +332,25 @@ def train(rank, opt):
         loss_reduced.backward()
         synchronize()
         optimizer.step()
-        if rank == 0 and tid % opt.summary_every_iter == 0:
+        if tid % opt.summary_every_iter == 0:
             ctx = process_sun360_losses(
                 tid,
                 loss_dict,
                 ctx,
                 logger,
             )
-            for name in ["horizon", "pitch", "vfov", "roll"]:
+            if rank == 0 and writer is not None:
+                for name in ["horizon", "pitch", "vfov", "roll"]:
+                    writer.add_scalar(
+                        f"loss_train/train_{name}_loss",
+                        mean(ctx[f"loss_{name}"]),
+                        tid,
+                    )
                 writer.add_scalar(
-                    f"loss_train/train_{name}_loss",
-                    mean(ctx[f"loss_{name}"]),
+                    "loss_train/train_calib_total_loss",
+                    mean(ctx["total_loss"]),
                     tid,
                 )
-            writer.add_scalar(
-                "loss_train/train_calib_total_loss",
-                mean(ctx["total_loss"]),
-                tid,
-            )
             logger_report(epoch, tid, toreport, logger)
         if opt.save_every_iter != 0 and tid % opt.save_every_iter == 0 and i > 0:
             logger.info(f"Checking to save at {tid}")
@@ -400,7 +410,7 @@ def train(rank, opt):
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(
-        os.path.abspath(inspect.getfile(inspect.currentframe()))
+        os.path.abspath(inspect.getfile(inspect.currentframe())),
     )
     print(current_dir)
     sys.path.insert(0, current_dir)
@@ -413,7 +423,7 @@ if __name__ == "__main__":
     torch.manual_seed(seed)
 
     parser = argparse.ArgumentParser(
-        description="Rui's Scale Estimation Network Training"
+        description="Rui's Scale Estimation Network Training",
     )
     # Training
     parser.add_argument("--task-name", type=str, default="tmp", help="resume training")
@@ -455,7 +465,10 @@ if __name__ == "__main__":
         help="save checkpoint every ? epoch",
     )
     parser.add_argument(
-        "--vis-every-epoch", type=int, default=5, help="vis every ? epoch"
+        "--vis-every-epoch",
+        type=int,
+        default=5,
+        help="vis every ? epoch",
     )
     parser.add_argument(
         "--est_bbox",
@@ -501,9 +514,9 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument(
-        "opts",
+        "--opts",
         help="Modify config options using the command-line",
-        default=None,
+        default=[],
         nargs=argparse.REMAINDER,
     )
 

@@ -1,41 +1,45 @@
-import datetime
 import argparse
-import os
-import sys
-from pathlib import Path
+import datetime
 import inspect
+import os
 import random
+import sys
+from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 import torch
 import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.optim as optim
 from dataset_coco_pickle_eccv import COCO2017ECCV
 from dataset_coco_pickle_eccv import my_collate
 from dataset_cvpr import my_collate_SUN360
 from dataset_cvpr import SUN360Horizon
+from eval_epoch_cvpr_RCNN import eval_epoch_cvpr_RCNN
 from maskrcnn_rui.config import cfg as CFG
 from maskrcnn_rui.data.transforms import build_transforms_maskrcnn
 from maskrcnn_rui.data.transforms import build_transforms_yannick
-from maskrcnn_rui.utils.comm import get_rank, synchronize
+from maskrcnn_rui.utils.comm import get_rank
+from maskrcnn_rui.utils.comm import synchronize
 from models.model_RCNNOnly_combine_indeptPointnet_maskrcnnPose_discount import (
     RCNNOnly_combine,
 )
-from eval_epoch_cvpr_RCNN import eval_epoch_cvpr_RCNN
 from tensorboardX import SummaryWriter
+from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from train_batch_combine_RCNNOnly_v5_pose_multiCat import train_batch_combine
 from utils.checkpointer import DetectronCheckpointer
 from utils.data_utils import make_data_loader
-from utils.eval_save_utils_combine_RCNNONly import check_eval_COCO, check_save
+from utils.eval_save_utils_combine_RCNNONly import check_eval_COCO
+from utils.eval_save_utils_combine_RCNNONly import check_save
 from utils.logger import printer as PRINTER
 from utils.logger import setup_logger
 from utils.model_utils import get_bins_combine
-from utils.train_utils import cycle, process_losses, process_writer
+from utils.train_utils import cycle
+from utils.train_utils import process_losses
+from utils.train_utils import process_writer
 from utils.utils_misc import colored
-from collections import defaultdict
 
 
 def logger_report(epoch, tid, toreport, logger):
@@ -66,7 +70,10 @@ def train(rank, opt):
     opt.rank = rank
     world_size = int(os.environ["WORLD_SIZE"])
     dist.init_process_group(
-        "nccl", rank=rank, world_size=world_size, timeout=datetime.timedelta(seconds=30)
+        "nccl",
+        rank=rank,
+        world_size=world_size,
+        timeout=datetime.timedelta(seconds=30),
     )
     if rank == 0:
         print(f"Group initialized? {dist.is_initialized()}", flush=True)
@@ -235,7 +242,7 @@ def train(rank, opt):
                 collate_fn=my_collate_SUN360,
                 batch_size_override=-1,
                 is_sun360=True,
-            )
+            ),
         )
         ds_eval_SUN360 = SUN360Horizon(
             transforms=eval_trnfs_maskrcnn,
@@ -281,12 +288,13 @@ def train(rank, opt):
         rank = 0
     patience = 0
     evaluate_at_every = (
-        len(train_loader_SUN360.batch_sampler.batch_sampler)
+        len(training_loader_coco_vis.batch_sampler.batch_sampler)
         if opt.evaluate_every == -1
         else int(opt.evaluate_every)
     )
+    skip_for = tid_start % len(training_loader_coco_vis.batch_sampler.batch_sampler)
     logger.info(
-        f"Starting at iteration {0}, batch skipping first {tid_start % evaluate_at_every},  to complete {opt.iter} for a total of {opt.iter - tid_start} actual trained batches.",
+        f"Starting at iteration {0}, batch skipping first {skip_for},  to complete {opt.iter} for a total of {opt.iter - tid_start} actual trained batches.",
     )
     if not opt.not_val:
         logger.info(
@@ -307,7 +315,6 @@ def train(rank, opt):
         position=1,
         disable=rank != 0,
     )
-    skip_for = tid_start % evaluate_at_every
     for i, coco_data in zip(
         range(0, opt.iter),
         training_loader_coco_vis,
@@ -383,7 +390,7 @@ def train(rank, opt):
                     "W_list": W_list,
                     "H_list": H_list,
                     "inputSUN360_Image_yannickTransform_list": inputSUN360_Image_yannickTransform_list,
-                }
+                },
             )
         bins = input_dict["bins"]
         loss_dict, return_dict = train_batch_combine(
@@ -528,7 +535,7 @@ def train(rank, opt):
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(
-        os.path.abspath(inspect.getfile(inspect.currentframe()))
+        os.path.abspath(inspect.getfile(inspect.currentframe())),
     )
     print(current_dir)
     sys.path.insert(0, current_dir)
@@ -541,7 +548,7 @@ if __name__ == "__main__":
     torch.manual_seed(seed)
 
     parser = argparse.ArgumentParser(
-        description="Rui's Scale Estimation Network Training"
+        description="Rui's Scale Estimation Network Training",
     )
     # Training
     parser.add_argument("--task-name", type=str, default="tmp", help="resume training")
@@ -583,7 +590,10 @@ if __name__ == "__main__":
         help="save checkpoint every ? epoch",
     )
     parser.add_argument(
-        "--vis-every-epoch", type=int, default=5, help="vis every ? epoch"
+        "--vis-every-epoch",
+        type=int,
+        default=5,
+        help="vis every ? epoch",
     )
     # Model
     parser.add_argument(
@@ -738,9 +748,9 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument(
-        "opts",
+        "--opts",
         help="Modify config options using the command-line",
-        default=None,
+        default=[],
         nargs=argparse.REMAINDER,
     )
 
