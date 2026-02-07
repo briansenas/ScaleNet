@@ -1,5 +1,6 @@
 slurmReports/
 config/*.yaml
+tf1.7py
 config/*.json
 *.pyc
 *.zip
