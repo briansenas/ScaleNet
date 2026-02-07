@@ -3,7 +3,6 @@ import torch
 from maskrcnn_benchmark.utils.comm import get_world_size
 from maskrcnn_rui.data import samplers
 from maskrcnn_rui.data.build import make_data_sampler
-from torchvision import transforms
 from utils.train_utils import cycle
 
 
@@ -17,29 +16,6 @@ class RandomSaturation:
             im = torch.clamp(im + (torch.max(im, 0)[0] - im) * saturation_amt, 0, 1)
             sample[0] = im
         return sample
-
-
-perturb = transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)
-normalize = transforms.Normalize(
-    mean=[0.485, 0.456, 0.406],
-    std=[0.229, 0.224, 0.225],
-)
-train_trnfs_yannick = transforms.Compose(
-    [
-        transforms.Resize((224, 224)),
-        perturb,
-        transforms.ToTensor(),
-        RandomSaturation(),
-        normalize,
-    ],
-)
-eval_trnfs_yannick = transforms.Compose(
-    [
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        normalize,
-    ],
-)
 
 
 def make_batch_data_sampler(
@@ -82,11 +58,11 @@ def make_data_loader(
             if not is_sun360
             else cfg.SOLVER.IMS_PER_BATCH_SUN360
         )
-        assert images_per_batch % num_gpus == 0, (
-            "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
-                images_per_batch,
-                num_gpus,
-            )
+        assert (
+            images_per_batch % num_gpus == 0
+        ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
+            images_per_batch,
+            num_gpus,
         )
         images_per_gpu = (
             images_per_batch // num_gpus
@@ -100,11 +76,11 @@ def make_data_loader(
         images_per_batch = (
             cfg.TEST.IMS_PER_BATCH if not is_sun360 else cfg.TEST.IMS_PER_BATCH_SUN360
         )
-        assert images_per_batch % num_gpus == 0, (
-            "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
-                images_per_batch,
-                num_gpus,
-            )
+        assert (
+            images_per_batch % num_gpus == 0
+        ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
+            images_per_batch,
+            num_gpus,
         )
         images_per_gpu = (
             images_per_batch // num_gpus
@@ -134,6 +110,7 @@ def make_data_loader(
         batch_sampler=batch_sampler,
         collate_fn=collate_fn,
     )
+    logger.info("DATALOADER WORKERS %d" % num_workers)
     logger.info(
         (
             "++++++[train_utils] len(dataset) %d, len(sampler) %d, len(batch_sampler) %d "

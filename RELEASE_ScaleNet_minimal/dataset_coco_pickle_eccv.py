@@ -276,7 +276,7 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
         if self.train and self.opt.est_kps:
             target_maskrcnnTransform.add_field("keypoints_ori", target_keypoints)
             target_maskrcnnTransform.add_field("boxlist_ori", target)
-        target_maskrcnnTransform.add_field("img_files", [self.img_files[k]] * num_boxes)
+        # target_maskrcnnTransform.add_field("img_files", [self.img_files[k]] * num_boxes)
 
         if self.train:
             y_person = 1.75
