@@ -40,6 +40,7 @@ from utils.train_utils import cycle
 from utils.train_utils import process_losses
 from utils.train_utils import process_writer
 from utils.utils_misc import colored
+from utils.utils_misc import green, red
 
 
 def logger_report(epoch, tid, toreport, logger):
@@ -143,8 +144,8 @@ def train(rank, opt):
         betas=(opt.beta1, 0.999),
         eps=1e-5,
     )
-    scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.5, patience=10, cooldown=5)
-    earlystop = 15
+    scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.5, patience=3, cooldown=6)
+    earlystop = 10
 
     opt.checkpoints_path_task = os.path.join(opt.checkpoints_folder, opt.task_name)
     save_to_disk = get_rank() == 0
@@ -289,7 +290,7 @@ def train(rank, opt):
     patience = 0
     evaluate_at_every = (
         len(training_loader_coco_vis.batch_sampler.batch_sampler)
-        if opt.evaluate_every == -1
+        if (opt.evaluate_every is None or opt.evaluate_every == -1)
         else int(opt.evaluate_every)
     )
     skip_for = tid_start % len(training_loader_coco_vis.batch_sampler.batch_sampler)
@@ -478,6 +479,8 @@ def train(rank, opt):
             )
         # After computing loss_dict and other stats for this tid/epoch
         if i != 0 and tid % (evaluate_at_every) == 0:
+            # Reset the counter of the evaluation bar
+            eval_bar.reset()
             print("Evaluate the model")
             epoch += 1
             is_better = check_eval_COCO(
@@ -494,19 +497,20 @@ def train(rank, opt):
                 scheduler=scheduler,
                 epochs_evalued=epochs_evalued,
             )
-            model.eval()
             # So that we can check if our calib model is drifting
-            eval_epoch_cvpr_RCNN(
-                model=model,
-                validation_loader=eval_loader_SUN360,
-                epoch=epoch,
-                tid=tid,
-                device=device,
-                writer=writer,
-                logger=logger,
-                opt=opt,
-            )
-            model.train()
+            if opt.train_cameraCls:
+                model.eval()
+                eval_epoch_cvpr_RCNN(
+                    model=model,
+                    validation_loader=eval_loader_SUN360,
+                    epoch=epoch,
+                    tid=tid,
+                    device=device,
+                    writer=writer,
+                    logger=logger,
+                    opt=opt,
+                )
+                model.train()
             check_save(
                 rank=rank,
                 tid=tid,
@@ -518,10 +522,11 @@ def train(rank, opt):
                 logger=logger,
                 is_better=is_better,
             )
-
             if not is_better:
+                logger.info(red("[WORST]"))
                 patience += 1
             else:
+                logger.info(green("[BETTER]"))
                 patience = 0
             if patience >= earlystop:
                 logger.info(f"[EarlyStopping] No improvements over {patience} epochs")
@@ -565,7 +570,7 @@ if __name__ == "__main__":
         help="set to 0 to save ONLY at the end of each epoch",
     )
     parser.add_argument("--summary-every-iter", type=int, default=100, help="")
-    parser.add_argument("--evaluate-every", type=int, default=5000, help="")
+    parser.add_argument("--evaluate-every", type=int, default=None, help="")
     parser.add_argument(
         "--iter",
         type=int,
@@ -665,7 +670,7 @@ if __name__ == "__main__":
         help="Enable estimating keypoints",
     )
     parser.add_argument("--if-discount", action="store_true", help="")
-    parser.add_argument("--discount-from", type=str, default="pred")  # ('GT', 'pred')
+    parser.add_argument("--discount-from", type=str, default="GT")  # ('GT', 'pred')
 
     # Losses
     parser.add_argument(

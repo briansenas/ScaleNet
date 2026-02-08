@@ -7,6 +7,7 @@ MODEL:
   RCNN_WEIGHT_BOX_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
   RCNN_WEIGHT_CLS_HEAD: "SUN360RCNN-FT"
   RCNN_WEIGHT_KPS_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+  KEYPOINT_ON: True
 
   BACKBONE:
     CONV_BODY: "FBNet"
@@ -14,6 +15,7 @@ MODEL:
   FBNET:
     ARCH: "cham_v1a"
     BN_TYPE: "bn"
+    KPTS_HEAD_LAST_SCALE: 1.0
     WIDTH_DIVISOR: 8
     DW_CONV_SKIP_RELU: True
     DW_CONV_SKIP_BN: True
@@ -28,7 +30,6 @@ MODEL:
     RPN_HEAD: FBNet.rpn_head
   ROI_HEADS:
     BATCH_SIZE_PER_IMAGE: 128
-    USE_FPN: True
   ROI_BOX_HEAD:
     POOLER_RESOLUTION: 6
     NUM_CLASSES_h: 256
@@ -53,38 +54,38 @@ MODEL:
     NUM_CLASSES: 256
     PREDICTOR: FCPredictorRui
   HUMAN:
-    MEAN: 1.75
-    STD: 0.2
+    MEAN: 1.70
+    STD: 0.15
   POINTNET:
     N_PAD_TO: 10
     PATH: "models/pointnet"
   LOSS:
-    VT_LOSS_CLAMP: 5.
+    VT_LOSS_CLAMP: 2.
 DATALOADER:
   SIZE_DIVISIBILITY: 0
   NUM_WORKERS: 4
 DATA:
   COCO:
-    GOOD_NUM: 100
+    GOOD_NUM: 10
 SOLVER:
   BASE_LR: 1e-3
   WARMUP_FACTOR: 0.1
-  WARMUP_ITERS: 800
-  WARMUP_METHOD: "linear"
   WEIGHT_DECAY: 0.0001
-  STEPS: (60000, 80000)
-  MAX_ITER: 90000
+  WARMUP_ITERS: 500
+  WARMUP_METHOD: "linear"
+  STEPS: (5000, 40000)
+  MAX_ITER: 50000
   IMS_PER_BATCH: 12 # should be divisible by the number of GPUs -- 16 for KPS
   IMS_PER_BATCH_SUN360: 4 # should be divisible by the number of GPUs
   PERSON_WEIGHT: 0.05
 TEST:
   IMS_PER_BATCH: 12 # should be divisible by the number of GPUs(?) -- 16 for KPS
-  IMS_PER_BATCH_SUN360: 8 # should be divisible by the number of GPUs(?)
+  IMS_PER_BATCH_SUN360: 4 # should be divisible by the number of GPUs(?)
 INPUT:
   MIN_SIZE_TRAIN: (600, )
-  MAX_SIZE_TRAIN: 800
+  MAX_SIZE_TRAIN: 1000
   MIN_SIZE_TEST: 600
-  MAX_SIZE_TEST: 800
+  MAX_SIZE_TEST: 1000
   PIXEL_MEAN: [103.53, 116.28, 123.675]
   PIXEL_STD: [57.375, 57.12, 58.395]
   HORIZONTAL_FLIP_PROB_TRAIN: 0.

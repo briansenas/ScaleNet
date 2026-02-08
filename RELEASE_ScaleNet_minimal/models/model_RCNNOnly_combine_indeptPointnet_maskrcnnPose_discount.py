@@ -188,6 +188,7 @@ class RCNNOnly_combine(nn.Module):
         )
 
         # Load backbone
+        self.logger.info(colored("LOADING BACKBONE", "yellow", "on_blue"))
         if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_BACKBONE:
             _ = checkpointer.load(
                 task_name=self.cfg.MODEL.RCNN_WEIGHT_BACKBONE,
@@ -200,56 +201,60 @@ class RCNNOnly_combine(nn.Module):
             )
 
         # Load camera classifiers except camH
-        if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD:
-            _ = checkpointer.load(
-                task_name=self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD,
-                only_load_kws=["classifier_heads"],
-                skip_kws=["camH"],
-            )
-        else:
-            skip_kws_CLS_HEAD = [
-                "classifier_%s.predictor" % cls_name for cls_name in self.cls_names
-            ]
-            replace_kws_CLS_HEAD = [
-                "classifier_heads.classifier_%s" % cls_name
-                for cls_name in self.cls_names
-            ]
-            replace_with_kws_CLS_HEAD = ["roi_heads.box"] * len(self.cls_names)
-            _ = checkpointer.load(
-                f=self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD,
-                only_load_kws=replace_kws_CLS_HEAD,
-                skip_kws=skip_kws_CLS_HEAD,
-                replace_kws=replace_kws_CLS_HEAD,
-                replace_with_kws=replace_with_kws_CLS_HEAD,
-            )
-
-        # Initialize camH heads from bbox heads
-        if not self.opt.pointnet_camH:
-            if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD:
+        if self.opt.train_cameraCls:
+            self.logger.info(colored("LOADING CLASSIFIERS", "white", "on_blue"))
+            if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD:
                 _ = checkpointer.load(
-                    task_name=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
-                    only_load_kws=["camH"],
+                    task_name=self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD,
+                    only_load_kws=["classifier_heads"],
+                    skip_kws=["camH"],
                 )
             else:
-                cls_names_camH = ["camH"]
                 skip_kws_CLS_HEAD = [
-                    "classifier_%s.predictor" % cls_name for cls_name in cls_names_camH
+                    "classifier_%s.predictor" % cls_name for cls_name in self.cls_names
                 ]
                 replace_kws_CLS_HEAD = [
                     "classifier_heads.classifier_%s" % cls_name
-                    for cls_name in cls_names_camH
+                    for cls_name in self.cls_names
                 ]
-                replace_with_kws_CLS_HEAD = ["roi_heads.box"]
+                replace_with_kws_CLS_HEAD = ["roi_heads.box"] * len(self.cls_names)
                 _ = checkpointer.load(
-                    f=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
+                    f=self.cfg.MODEL.RCNN_WEIGHT_CLS_HEAD,
                     only_load_kws=replace_kws_CLS_HEAD,
                     skip_kws=skip_kws_CLS_HEAD,
                     replace_kws=replace_kws_CLS_HEAD,
                     replace_with_kws=replace_with_kws_CLS_HEAD,
                 )
 
+        # # Initialize camH heads from bbox heads
+        # if not self.opt.pointnet_camH:
+        #     print("LOADING POINTNET_CAMH")
+        #     if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD:
+        #         _ = checkpointer.load(
+        #             task_name=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
+        #             only_load_kws=["camH"],
+        #         )
+        #     else:
+        #         cls_names_camH = ["camH"]
+        #         skip_kws_CLS_HEAD = [
+        #             "classifier_%s.predictor" % cls_name for cls_name in cls_names_camH
+        #         ]
+        #         replace_kws_CLS_HEAD = [
+        #             "classifier_heads.classifier_%s" % cls_name
+        #             for cls_name in cls_names_camH
+        #         ]
+        #         replace_with_kws_CLS_HEAD = ["roi_heads.box"]
+        #         _ = checkpointer.load(
+        #             f=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
+        #             only_load_kws=replace_kws_CLS_HEAD,
+        #             skip_kws=skip_kws_CLS_HEAD,
+        #             replace_kws=replace_kws_CLS_HEAD,
+        #             replace_with_kws=replace_with_kws_CLS_HEAD,
+        #         )
+
         # # Load h heads
         if not self.RCNN.if_shared_kps_head:
+            self.logger.info(colored("LOADING shared kps head", "yellow", "on_blue"))
             if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD:
                 _ = checkpointer.load(
                     task_name=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
@@ -266,16 +271,26 @@ class RCNNOnly_combine(nn.Module):
 
         # Load bbox heads
         if self.opt.est_bbox:
-            _ = checkpointer.load(
-                f=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
-                only_load_kws=["roi_bbox_heads.box", "rpn"],
-                replace_kws=["roi_bbox_heads.box"],
-                replace_with_kws=["roi_heads.box"],
-            )
+            self.logger.info(colored("LOADING BBOX", "yellow", "on_blue"))
+            if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD:
+                _ = checkpointer.load(
+                    task_name=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
+                    only_load_kws=["roi_bbox_heads.box", "rpn"],
+                    replace_kws=["roi_bbox_heads.box"],
+                    replace_with_kws=["roi_heads.box"],
+                )
+            else:
+                _ = checkpointer.load(
+                    f=self.cfg.MODEL.RCNN_WEIGHT_BOX_HEAD,
+                    only_load_kws=["roi_bbox_heads.box", "rpn"],
+                    replace_kws=["roi_bbox_heads.box"],
+                    replace_with_kws=["roi_heads.box"],
+                )
 
         # if self.cfg.MODEL.KEYPOINT_ON:
         # Load h and kps head
         if self.RCNN.if_shared_kps_head:
+            self.logger.info(colored("LOADING KPS", "yellow", "on_blue"))
             if "SUN360RCNN" in self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD:
                 _ = checkpointer.load(
                     task_name=self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD,
@@ -285,7 +300,7 @@ class RCNNOnly_combine(nn.Module):
             else:
                 _ = checkpointer.load(
                     f=self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD,
-                    only_load_kws=["roi_bbox_heads.keypoint"],
+                    # only_load_kws=["roi_bbox_heads.keypoint"],
                     skip_kws=["roi_bbox_heads.keypoint.predictor_person_h"],
                     replace_kws=["roi_bbox_heads.keypoint"],
                     replace_with_kws=["roi_heads.keypoint"],
@@ -381,7 +396,7 @@ class RCNNOnly_combine(nn.Module):
         for image_idx, box_list_kps in enumerate(
             (
                 list_of_box_list_kps_gt_clone
-                if not self.opt.est_kps
+                if not self.opt.est_bbox
                 else output_RCNN["predictions"]
             ),
         ):

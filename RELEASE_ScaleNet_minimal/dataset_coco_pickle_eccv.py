@@ -165,7 +165,7 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
         )
 
         if opt.debug:
-            max_debug = 100
+            max_debug = 50
             self.bbox_npy_files = self.bbox_npy_files[:max_debug]
             self.pickle_files = self.pickle_files[:max_debug]
             self.img_files = self.img_files[:max_debug]

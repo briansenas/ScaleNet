@@ -125,7 +125,7 @@ def eval_epoch_combine_RCNNOnly(
 
                     if opt.train_cameraCls and opt.train_roi_h and opt.pointnet_camH:
                         eval_loss_vt_list.append(loss_dict_reduced["loss_vt"].item())
-                        toreport["loss_vt"] = eval_loss_vt_list[-1]
+                        toreport["vt"] = eval_loss_vt_list[-1]
                         if opt.pointnet_camH_refine:
                             loss_vt_layers_dict_reduced = reduce_loss_dict(
                                 return_dict["loss_vt_layers_dict"],
@@ -141,7 +141,7 @@ def eval_epoch_combine_RCNNOnly(
                             eval_loss_person_list.append(
                                 loss_dict_reduced["loss_person"].item(),
                             )
-                            toreport["loss_person"] = eval_loss_person_list[-1]
+                            toreport["person"] = eval_loss_person_list[-1]
 
                         vt_loss_allBoxes_dict.update(
                             return_dict["vt_loss_allBoxes_dict"],
@@ -172,7 +172,7 @@ def eval_epoch_combine_RCNNOnly(
 
                     if opt.est_kps:
                         eval_loss_kp_list.append(loss_dict_reduced["loss_kp"].item())
-                        toreport["loss_kp"] = eval_loss_kp_list[-1]
+                        toreport["kp"] = eval_loss_kp_list[-1]
                     if opt.est_bbox:
                         eval_loss_bbox_cls_list.append(
                             loss_dict_reduced["loss_bbox_cls"].item(),
@@ -180,8 +180,8 @@ def eval_epoch_combine_RCNNOnly(
                         eval_loss_bbox_reg_list.append(
                             loss_dict_reduced["loss_bbox_reg"].item(),
                         )
-                        toreport["loss_bbox_cls"] = eval_loss_bbox_cls_list[-1]
-                        toreport["loss_bbox_reg"] = eval_loss_bbox_cls_list[-1]
+                        toreport["cls"] = eval_loss_bbox_cls_list[-1]
+                        toreport["reg"] = eval_loss_bbox_cls_list[-1]
 
                     im_filename_list += list(im_filename)
 

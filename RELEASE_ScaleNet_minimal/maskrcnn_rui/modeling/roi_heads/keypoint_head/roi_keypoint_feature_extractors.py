@@ -1,7 +1,6 @@
 from maskrcnn_benchmark.layers import Conv2d
-from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.poolers import Pooler
-from maskrcnn_rui.modeling import registry as rui_registry
+from maskrcnn_rui.modeling import registry 
 from torch import nn
 from torch.nn import functional as F
 
@@ -48,7 +47,7 @@ def make_roi_keypoint_feature_extractor(cfg, in_channels):
             cfg.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR
         ]
     else:
-        func = rui_registry.ROI_BOX_FEATURE_EXTRACTORS[
+        func = registry.ROI_BOX_FEATURE_EXTRACTORS[
             cfg.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR
         ]
     return func(cfg, in_channels)

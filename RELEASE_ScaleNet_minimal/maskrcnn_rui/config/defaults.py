@@ -35,10 +35,8 @@ _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
 _C.MODEL.WEIGHT = ""
 _C.MODEL.RCNN_WEIGHT = "SUN360RCNN"
 _C.MODEL.RCNN_WEIGHT_BACKBONE = "SUN360RCNN"
-_C.MODEL.RCNN_WEIGHT_BOX_HEAD = "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-_C.MODEL.RCNN_WEIGHT_KPS_HEAD = (
-    "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
-)
+_C.MODEL.RCNN_WEIGHT_BOX_HEAD = "SUN360RCNN"
+_C.MODEL.RCNN_WEIGHT_KPS_HEAD = "catalog://ImageNetPretrained/MSRA/R-50"
 # _C.MODEL.RCNN_WEIGHT_KPS_HEAD = "catalog://ImageNetPretrained/MSRA/R-50"
 _C.MODEL.RCNN_WEIGHT_CLS_HEAD = "SUN360RCNN"
 _C.MODEL.DENSENET_WEIGHT = ""
@@ -219,7 +217,7 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 # Minimum score threshold (assuming scores in a [0, 1] range); a value chosen to
 # balance obtaining high recall with not having too many low precision
 # detections that will slow down inference post processing steps (like NMS)
-_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.025
+_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.05
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 _C.MODEL.ROI_HEADS.NMS = 0.5
@@ -377,7 +375,7 @@ _C.MODEL.RETINANET.PRIOR_PROB = 0.01
 
 # Inference cls score threshold, anchors with score > INFERENCE_TH are
 # considered for inference
-_C.MODEL.RETINANET.INFERENCE_TH = 0.01
+_C.MODEL.RETINANET.INFERENCE_TH = 0.05
 
 # NMS threshold used in RetinaNet
 _C.MODEL.RETINANET.NMS_TH = 0.4
@@ -462,7 +460,7 @@ _C.SOLVER.TEST_PERIOD = 0
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
 _C.SOLVER.IMS_PER_BATCH = 8
-_C.SOLVER.IMS_PER_BATCH_SUN360 = 2
+_C.SOLVER.IMS_PER_BATCH_SUN360 = 4
 
 _C.SOLVER.STEP_LR_SIZE = 0
 
@@ -477,10 +475,10 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.TEST.IMS_PER_BATCH = 1
-_C.TEST.IMS_PER_BATCH_SUN360 = 1
+_C.TEST.IMS_PER_BATCH = 8
+_C.TEST.IMS_PER_BATCH_SUN360 = 4
 # Number of detections per image
-_C.TEST.DETECTIONS_PER_IMG = 25
+_C.TEST.DETECTIONS_PER_IMG = 100
 
 # ---------------------------------------------------------------------------- #
 # Test-time augmentations for bounding box detection

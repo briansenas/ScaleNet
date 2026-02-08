@@ -5,6 +5,8 @@ import torch
 from maskrcnn_benchmark.utils.comm import get_rank
 from utils.utils_misc import red
 from utils.utils_misc import white_blue
+import logging
+from utils.utils_misc import colored
 
 # from maskrcnn_benchmark.utils.imports import import_file
 
@@ -96,7 +98,7 @@ def align_and_update_state_dicts(
     )
     max_size_loaded = max([len(key) for key in loaded_keys]) if loaded_keys else 1
     log_str_template = "{: <{}} <<LOADED FROM<< {: <{}} of shape {}"
-    # logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     # print(logger)
     all_possible_loads = 0
     success_loads = 0

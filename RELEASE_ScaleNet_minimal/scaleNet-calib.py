@@ -32,8 +32,8 @@ from utils.logger import printer as PRINTER
 from utils.logger import setup_logger
 from utils.model_utils import oneLargeBboxList
 from utils.train_utils import process_sun360_losses
-from utils.train_utils import reduce_loss_dict
 from utils.utils_misc import colored
+from utils.utils_misc import green, red
 
 
 def logger_report(epoch, tid, toreport, logger):
@@ -115,14 +115,8 @@ def train(rank, opt):
         betas=(opt.beta1, 0.999),
         eps=1e-5,
     )
-    scheduler = ReduceLROnPlateau(
-        optimizer,
-        "min",
-        factor=0.1,
-        patience=20,
-        cooldown=10,
-    )
-    earlystop = 30
+    scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.5, patience=3, cooldown=1)
+    earlystop = 10
 
     opt.checkpoints_path_task = os.path.join(opt.checkpoints_folder, opt.task_name)
     save_to_disk = get_rank() == 0
@@ -218,7 +212,7 @@ def train(rank, opt):
     patience = 0
     evaluate_at_every = (
         len(train_loader_SUN360.batch_sampler.batch_sampler)
-        if opt.evaluate_every == -1
+        if (opt.evaluate_every is None or opt.evaluate_every == -1)
         else int(opt.evaluate_every)
     )
     skip_for = tid_start % len(train_loader_SUN360.batch_sampler.batch_sampler)
@@ -367,6 +361,8 @@ def train(rank, opt):
             )
         # After computing loss_dict and other stats for this tid/epoch
         if i != 0 and tid % (evaluate_at_every) == 0:
+            # Reset the counter of the evaluation bar
+            eval_bar.reset()
             print("Evaluate the model")
             epoch += 1
             is_better = check_eval_SUN360(
@@ -395,8 +391,10 @@ def train(rank, opt):
             )
 
             if not is_better:
+                logger.info(red("[WORST]"))
                 patience += 1
             else:
+                logger.info(green("[BETTER]"))
                 patience = 0
             if patience >= earlystop:
                 logger.info(f"[EarlyStopping] No improvements over {patience} epochs")
@@ -440,7 +438,7 @@ if __name__ == "__main__":
         help="set to 0 to save ONLY at the end of each epoch",
     )
     parser.add_argument("--summary-every-iter", type=int, default=100, help="")
-    parser.add_argument("--evaluate-every", type=int, default=5000, help="")
+    parser.add_argument("--evaluate-every", type=int, default=None, help="")
     parser.add_argument(
         "--iter",
         type=int,
