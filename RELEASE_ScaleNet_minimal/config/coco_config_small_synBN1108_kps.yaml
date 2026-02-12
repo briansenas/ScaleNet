@@ -3,42 +3,33 @@
 MODEL:
   NAME: 'RCNN-kps'
   META_ARCHITECTURE: "GeneralizedRCNNRui"
-  RCNN_WEIGHT_BACKBONE: "SUN360RCNN-FT"
-  RCNN_WEIGHT_BOX_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
-  RCNN_WEIGHT_CLS_HEAD: "SUN360RCNN-FT"
-  RCNN_WEIGHT_KPS_HEAD: "checkpoint/e2e_faster_rcnn_fbnet_chamv1a_600.pth"
+  RCNN_WEIGHT_BACKBONE: "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
+  RCNN_WEIGHT_BOX_HEAD: "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
+  RCNN_WEIGHT_CLS_HEAD: "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
+  RCNN_WEIGHT_KPS_HEAD: "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
   KEYPOINT_ON: True
 
   BACKBONE:
-    CONV_BODY: "FBNet"
-
-  FBNET:
-    ARCH: "cham_v1a"
-    BN_TYPE: "bn"
-    KPTS_HEAD_LAST_SCALE: 1.0
-    WIDTH_DIVISOR: 8
-    DW_CONV_SKIP_RELU: True
-    DW_CONV_SKIP_BN: True
+    CONV_BODY: R-50-FPN
+  RESNETS:
+    BACKBONE_OUT_CHANNELS: 256
   RPN:
-    ANCHOR_SIZES: (32, 64, 128, 256, 512)
-    ANCHOR_STRIDE: (16, )
-    BATCH_SIZE_PER_IMAGE: 256
-    PRE_NMS_TOP_N_TRAIN: 6000
-    PRE_NMS_TOP_N_TEST: 6000
-    POST_NMS_TOP_N_TRAIN: 2000
-    POST_NMS_TOP_N_TEST: 200
-    RPN_HEAD: FBNet.rpn_head
+    USE_FPN: True
+    ANCHOR_STRIDE: (4, 8, 16, 32, 64)
+    PRE_NMS_TOP_N_TRAIN: 2000
+    PRE_NMS_TOP_N_TEST: 1000
+    POST_NMS_TOP_N_TEST: 1000
+    FPN_POST_NMS_TOP_N_TEST: 1000
   ROI_HEADS:
-    BATCH_SIZE_PER_IMAGE: 128
+    USE_FPN: True
   ROI_BOX_HEAD:
-    POOLER_RESOLUTION: 6
-    NUM_CLASSES_h: 256
-    NUM_CLASSES_bbox: 81
-    FEATURE_EXTRACTOR: FBNet.roi_head
-    POOLER_SAMPLING_RATIO: 2
+    POOLER_RESOLUTION: 7
     POOLER_SCALES: (0.25, 0.125, 0.0625, 0.03125)
-    PREDICTOR_h: FastRCNNPredictorRuiMod
-    PREDICTOR_bbox: FastRCNNPredictor
+    POOLER_SAMPLING_RATIO: 2
+    FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
+    PREDICTOR_bbox: "FPNPredictor"
+    NUM_CLASSES_h: 256
+    PREDICTOR_h: FPNPredictorRui
   ROI_KEYPOINT_HEAD:
     POOLER_SCALES: (0.25, 0.125, 0.0625, 0.03125)
     FEATURE_EXTRACTOR: "KeypointRCNNFeatureExtractor"
@@ -47,12 +38,6 @@ MODEL:
     POOLER_SAMPLING_RATIO: 2
     RESOLUTION: 56
     SHARE_BOX_FEATURE_EXTRACTOR: False
-  CLASSIFIER_HEAD:
-    # Old
-    POOLER_RESOLUTION: 6
-    FEATURE_EXTRACTOR: FBNet.roi_head
-    NUM_CLASSES: 256
-    PREDICTOR: FCPredictorRui
   HUMAN:
     MEAN: 1.70
     STD: 0.15
@@ -62,7 +47,7 @@ MODEL:
   LOSS:
     VT_LOSS_CLAMP: 2.
 DATALOADER:
-  SIZE_DIVISIBILITY: 0
+  SIZE_DIVISIBILITY: 32
   NUM_WORKERS: 4
 DATA:
   COCO:
@@ -75,19 +60,17 @@ SOLVER:
   WARMUP_METHOD: "linear"
   STEPS: (5000, 40000)
   MAX_ITER: 50000
-  IMS_PER_BATCH: 12 # should be divisible by the number of GPUs -- 16 for KPS
+  IMS_PER_BATCH: 4 # should be divisible by the number of GPUs -- 16 for KPS
   IMS_PER_BATCH_SUN360: 4 # should be divisible by the number of GPUs
   PERSON_WEIGHT: 0.05
 TEST:
-  IMS_PER_BATCH: 12 # should be divisible by the number of GPUs(?) -- 16 for KPS
+  IMS_PER_BATCH: 4 # should be divisible by the number of GPUs(?) -- 16 for KPS
   IMS_PER_BATCH_SUN360: 4 # should be divisible by the number of GPUs(?)
 INPUT:
-  MIN_SIZE_TRAIN: (600, )
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
   MAX_SIZE_TRAIN: 1000
-  MIN_SIZE_TEST: 600
+  MIN_SIZE_TEST: 800
   MAX_SIZE_TEST: 1000
-  PIXEL_MEAN: [103.53, 116.28, 123.675]
-  PIXEL_STD: [57.375, 57.12, 58.395]
   HORIZONTAL_FLIP_PROB_TRAIN: 0.
   VERTICAL_FLIP_PROB_TRAIN: 0.
 

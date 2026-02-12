@@ -24,6 +24,7 @@ class ROIBoxHeadRui(torch.nn.Module):
         # self.post_processor = make_roi_box_post_processor(cfg)
         # self.loss_evaluator = make_roi_box_loss_evaluator(cfg)
 
+    # In detectron 2 should accept (images, features, proposals, gt_instances | None)
     def forward(self, features, proposals, targets=None):
         """
         Arguments:
@@ -38,6 +39,8 @@ class ROIBoxHeadRui(torch.nn.Module):
             losses (dict[Tensor]): During training, returns the losses for the
                 head. During testing, returns an empty dict.
         """
+        # Can just delete images + gt_instances if not using them.
+        # The problem is, we must measure the loss here, so maybe gt_instances should contain gt_logits
         x = self.feature_extractor(features, proposals)
         class_logits = self.predictor(x)
         return {"class_logits": class_logits}

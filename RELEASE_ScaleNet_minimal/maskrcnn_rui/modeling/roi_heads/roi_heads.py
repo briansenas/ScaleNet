@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+
 from .box_head.box_head import build_roi_box_head
 from .box_head.box_head import build_roi_box_head_rui
 from .box_head.roi_box_predictors import make_roi_box_predictor_rui
@@ -18,6 +19,7 @@ class CombinedROIHeadsRui(torch.nn.ModuleDict):
         super().__init__(heads)
         self.cfg = cfg.clone()
 
+    # In detectron 2 should accept (images, features, proposals, gt_instances | None)
     def forward(self, features, proposals, targets=None):
         losses = {}
         loss_box = self.person_h(features, proposals, targets)
@@ -59,6 +61,7 @@ class CombinedClassifierHeads(torch.nn.ModuleDict):
         self.cfg = cfg.clone()
         self.opt = opt
 
+    # In detectron 2 should accept (images, features, proposals, gt_instances | None)
     def forward(self, features, proposals, targets=None):
         losses = {}
         loss_horizon = self.classifier_horizon(features, proposals, targets)

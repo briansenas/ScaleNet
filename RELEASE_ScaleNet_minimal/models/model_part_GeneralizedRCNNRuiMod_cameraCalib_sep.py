@@ -176,6 +176,7 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
                 )
             ]
 
+            features = self.backbone(images.tensors)
             cls_outputs = self.classifier_heads(features, list_of_oneLargeBbox_list)
             return_dict.update(
                 {

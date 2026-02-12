@@ -33,7 +33,8 @@ from utils.logger import setup_logger
 from utils.model_utils import oneLargeBboxList
 from utils.train_utils import process_sun360_losses
 from utils.utils_misc import colored
-from utils.utils_misc import green, red
+from utils.utils_misc import green
+from utils.utils_misc import red
 
 
 def logger_report(epoch, tid, toreport, logger):
@@ -271,12 +272,6 @@ def train(rank, opt):
             idx3,
             idx4,
         ) = pano_data
-        horizon_dist_gt, pitch_dist_gt, roll_dist_gt, vfov_dist_gt = (
-            horizon_dist_gt.to(device),
-            pitch_dist_gt.to(device),
-            roll_dist_gt.to(device),
-            vfov_dist_gt.to(device),
-        )
         horizon_idx_gt, pitch_idx_gt, roll_idx_gt, vfov_idx_gt = (
             idx1.to(device),
             idx2.to(device),
