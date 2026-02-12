@@ -40,7 +40,8 @@ from utils.train_utils import cycle
 from utils.train_utils import process_losses
 from utils.train_utils import process_writer
 from utils.utils_misc import colored
-from utils.utils_misc import green, red
+from utils.utils_misc import green
+from utils.utils_misc import red
 
 
 def logger_report(epoch, tid, toreport, logger):
@@ -144,8 +145,8 @@ def train(rank, opt):
         betas=(opt.beta1, 0.999),
         eps=1e-5,
     )
-    scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.5, patience=3, cooldown=6)
-    earlystop = 10
+    scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.5, patience=5)
+    earlystop = 15
 
     opt.checkpoints_path_task = os.path.join(opt.checkpoints_folder, opt.task_name)
     save_to_disk = get_rank() == 0

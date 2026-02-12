@@ -116,8 +116,8 @@ def train(rank, opt):
         betas=(opt.beta1, 0.999),
         eps=1e-5,
     )
-    scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.5, patience=3, cooldown=1)
-    earlystop = 10
+    scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.5, patience=5)
+    earlystop = 15
 
     opt.checkpoints_path_task = os.path.join(opt.checkpoints_folder, opt.task_name)
     save_to_disk = get_rank() == 0
