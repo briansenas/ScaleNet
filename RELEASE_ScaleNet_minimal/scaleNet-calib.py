@@ -474,7 +474,7 @@ if __name__ == "__main__":
         "--resume",
         type=str,
         help="resume training; can be full path (e.g. tmp/checkpoint0.pth.tar) or taskname (e.g. tmp)",
-        default="1109-0141-mm1_SUN360RCNN-HorizonPitchRollVfovNET_myDistNarrowerLarge1105_bs16on4_le1e-5_indeptClsHeads_synBNApex_valBS1_yannickTransformAug",
+        default="NoCkpt",
     )
     parser.add_argument(
         "--feature-only",
