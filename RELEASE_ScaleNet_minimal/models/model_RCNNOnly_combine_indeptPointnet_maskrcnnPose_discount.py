@@ -300,7 +300,7 @@ class RCNNOnly_combine(nn.Module):
             else:
                 _ = checkpointer.load(
                     f=self.cfg.MODEL.RCNN_WEIGHT_KPS_HEAD,
-                    # only_load_kws=["roi_bbox_heads.keypoint"],
+                    only_load_kws=["roi_bbox_heads.keypoint"],
                     skip_kws=["roi_bbox_heads.keypoint.predictor_person_h"],
                     replace_kws=["roi_bbox_heads.keypoint"],
                     replace_with_kws=["roi_heads.keypoint"],

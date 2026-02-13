@@ -111,7 +111,7 @@ def align_and_update_state_dicts(
         break_flag = False
         for skip_kw in skip_kws:
             if skip_kw in key:
-                # logger.warning(colored('====!!!!==== Skipping %s for in *skip_kws*'%key, 'cyan', 'on_blue'))
+                logger.warning(colored('====!!!!==== Skipping %s for in *skip_kws*'%key, 'cyan', 'on_blue'))
                 break_flag = True
         if break_flag:
             continue
@@ -122,22 +122,22 @@ def align_and_update_state_dicts(
                 if only_load_kw in key:
                     at_least_one_in_flag = True
             if at_least_one_in_flag == False:
-                # logger.warning(colored('====!!!!==== Skipping %s for NOT in *only_load_kws*'%key, 'cyan', 'on_blue'))
+                logger.warning(colored('====!!!!==== Skipping %s for NOT in *only_load_kws*'%key, 'cyan', 'on_blue'))
                 continue
 
         key_old = loaded_keys_ori[idx_old]
         model_state_dict[key] = loaded_state_dict[key_old]
 
-        # if rank == 0:
-        #     logger.warning(
-        #         log_str_template.format(
-        #             key,
-        #             max_size,
-        #             key_old,
-        #             max_size_loaded,
-        #             tuple(loaded_state_dict[key_old].shape),
-        #         ),
-        #     )
+        if rank == 0:
+            logger.warning(
+                log_str_template.format(
+                    key,
+                    max_size,
+                    key_old,
+                    max_size_loaded,
+                    tuple(loaded_state_dict[key_old].shape),
+                ),
+            )
         success_loads += 1
 
     if success_loads == all_possible_loads:
