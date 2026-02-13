@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ScaleNet      # create a short name for your job
 #SBATCH --partition dios         # Cola para ejecutar
-#SBATCH --nodelist atenea        # Nodo en concreto
+#SBATCH --nodelist atenea        # Nodo en concreto -- titan works.
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks-per-node=3      # total number of tasks per node
 #SBATCH --gres=gpu:3             # number of allocated gpus per node
@@ -11,7 +11,7 @@
 export MASTER_PORT=$(expr 10000 + $(echo -n $SLURM_JOBID | tail -c 4))
 export WORLD_SIZE=$(($SLURM_JOB_NUM_NODES * $SLURM_NTASKS_PER_NODE))
 echo "WORLD_SIZE="$WORLD_SIZE
-export SLURM_GPUS_ON_NODE=2
+export SLURM_GPUS_ON_NODE=3
 
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=$master_addr
