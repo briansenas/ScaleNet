@@ -113,7 +113,7 @@ class Checkpointer:
             replace_kws=replace_kws,
             replace_with_kws=replace_with_kws,
         )
-        if not self.if_reset_lr:
+        if self.if_reset_lr:
             self.logger.info(
                 colored(
                     "Not loading the optimizer saved in the checkpoint",

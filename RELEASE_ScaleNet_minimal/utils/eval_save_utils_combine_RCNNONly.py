@@ -133,16 +133,21 @@ def check_eval_SUN360(
                     )
                     is_better = scheduler.num_bad_epochs == 0
                     logger.info(
-                        green(
-                            "scheduler.step with loss_mean = %.2f, best = %.2f, bad = %d, patience = %d"
-                            % (
-                                return_dict_epoch["eval_loss_sum_calib"],
-                                scheduler.best,
-                                scheduler.num_bad_epochs,
-                                scheduler.patience,
+                            green(
+                                (
+                                    "scheduler.step with total_loss = %.2f at check_eval_calib epoch %d; "
+                                    + "lr: %.2E; num_bad_epochs: %d; patience: %d; best: %.2E"
+                                )
+                                % (
+                                    return_dict_epoch["eval_loss_sum_calib"],
+                                    epoch,
+                                    scheduler.optimizer.param_groups[0]["lr"],
+                                    scheduler.num_bad_epochs,
+                                    scheduler.patience,
+                                    scheduler.best,
+                                ),
                             ),
-                        ),
-                    )
+                        )
                     writer.add_scalar(
                         "training/calib-scheduler-num-bad-epochs",
                         scheduler.num_bad_epochs,

@@ -24,6 +24,7 @@ MODEL:
     POOLER_SAMPLING_RATIO: 2
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR_bbox: "FPNPredictor"
+    NUM_CLASSES_bbox: 2
     NUM_CLASSES_h: 256
     PREDICTOR_h: FPNPredictorRui
   HUMAN:
