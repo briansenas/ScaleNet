@@ -117,7 +117,7 @@ def train(rank, opt):
         eps=1e-5,
     )
     scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.5, patience=5)
-    earlystop = 15
+    earlystop = 25
 
     opt.checkpoints_path_task = os.path.join(opt.checkpoints_folder, opt.task_name)
     save_to_disk = get_rank() == 0
@@ -237,6 +237,7 @@ def train(rank, opt):
         disable=rank != 0,
     )
     epochs_evalued = []
+    earlystop_flag = torch.zeros(1).to(device)
     for i, pano_data in zip(
         range(0, opt.iter),
         train_loader_SUN360,
@@ -391,11 +392,15 @@ def train(rank, opt):
             else:
                 logger.info(green("[BETTER]"))
                 patience = 0
-            if patience >= earlystop:
+            if patience >= earlystop and rank == 0:
                 logger.info(f"[EarlyStopping] No improvements over {patience} epochs")
                 logger_report(epoch, tid, toreport, logger)
                 patience = 0
-                break
+                earlystop_flag += 1
+        synchronize()
+        dist.all_reduce(earlystop_flag)
+        if earlystop_flag >= 1:
+            break
 
     if opt.distributed:
         dist.destroy_process_group()

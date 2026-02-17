@@ -6,7 +6,7 @@
 #SBATCH --ntasks-per-node=3      # total number of tasks per node
 #SBATCH --gres=gpu:3             # number of allocated gpus per node
 #SBATCH --time=24:00:00          # total run time limit (HH:MM:SS)
-#SBATCH --output=./slurmReports/output.%a.out # STDOUT
+#SBATCH --output=./slurmReports/output.%a.%j.out # STDOUT
 
 export MASTER_PORT=$(expr 10000 + $(echo -n $SLURM_JOBID | tail -c 4))
 export WORLD_SIZE=$(($SLURM_JOB_NUM_NODES * $SLURM_NTASKS_PER_NODE))
