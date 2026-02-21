@@ -242,8 +242,6 @@ def train(rank, opt):
         range(0, opt.iter),
         train_loader_SUN360,
     ):
-        train_bar.update(1)
-        eval_bar.update(1)
         tid = i
         if i < skip_for:
             # SequentialBatch logic -- must have the seed set correctly
@@ -273,6 +271,10 @@ def train(rank, opt):
             idx3,
             idx4,
         ) = pano_data
+        # horizon_dist_gt = horizon_dist_gt.to(device)
+        # pitch_dist_gt = pitch_dist_gt.to(device)
+        # roll_dist_gt = roll_dist_gt.to(device)
+        # vfov_dist_gt = vfov_dist_gt.to(device)
         horizon_idx_gt, pitch_idx_gt, roll_idx_gt, vfov_idx_gt = (
             idx1.to(device),
             idx2.to(device),
@@ -299,6 +301,26 @@ def train(rank, opt):
             image_batch_list=inputSUN360_Image_yannickTransform_list,
             list_of_oneLargeBbox_list=list_of_oneLargeBbox_list,
         )
+        # loss_horizon = nn.functional.kl_div(
+        #     nn.functional.log_softmax(output_RCNN["output_horizon"], dim=1),
+        #     horizon_dist_gt,
+        #     reduction="batchmean",
+        # )
+        # loss_pitch = nn.functional.kl_div(
+        #     nn.functional.log_softmax(output_RCNN["output_pitch"], dim=1),
+        #     pitch_dist_gt,
+        #     reduction="batchmean",
+        # )
+        # loss_roll = nn.functional.kl_div(
+        #     nn.functional.log_softmax(output_RCNN["output_roll"], dim=1),
+        #     roll_dist_gt,
+        #     reduction="batchmean",
+        # )
+        # loss_vfov = nn.functional.kl_div(
+        #     nn.functional.log_softmax(output_RCNN["output_vfov"], dim=1),
+        #     vfov_dist_gt,
+        #     reduction="batchmean",
+        # )
         loss_horizon = loss_func(output_RCNN["output_horizon"], horizon_idx_gt)
         loss_pitch = loss_func(output_RCNN["output_pitch"], pitch_idx_gt)
         loss_roll = loss_func(output_RCNN["output_roll"], roll_idx_gt)
@@ -319,6 +341,7 @@ def train(rank, opt):
         }
         train_bar.set_postfix(**toreport)
         train_bar.update()
+        eval_bar.update()
         loss_reduced.backward()
         synchronize()
         optimizer.step()

@@ -283,6 +283,7 @@ def train(rank, opt):
     epoch = 0
     epochs_evalued = []
     ctx = defaultdict(list)
+    toreport = defaultdict(float)
     loss_func = torch.nn.L1Loss()
     if opt.distributed:
         rank = dist.get_rank()
@@ -322,8 +323,6 @@ def train(rank, opt):
         range(0, opt.iter),
         training_loader_coco_vis,
     ):
-        train_bar.update(1)
-        eval_bar.update(1)
         tid = i
         if i < skip_for:
             # SequentialBatch logic -- must have the seed set correctly
@@ -396,18 +395,25 @@ def train(rank, opt):
                 },
             )
         bins = input_dict["bins"]
-        loss_dict, return_dict = train_batch_combine(
-            input_dict,
-            model,
-            device,
-            opt,
-            is_training=True,
-            tid=tid,
-            loss_func=loss_func,
-            rank=rank,
-            if_SUN360=opt.train_cameraCls,
-            if_vis=if_vis,
-        )
+        try:
+            loss_dict, return_dict = train_batch_combine(
+                input_dict,
+                model,
+                device,
+                opt,
+                is_training=True,
+                tid=tid,
+                loss_func=loss_func,
+                rank=rank,
+                if_SUN360=opt.train_cameraCls,
+                if_vis=if_vis,
+            )
+        except Exception as e:
+            # NOTE: In case backward fails, see what loss was 0.0
+            logger_report(epoch, tid, toreport, logger)
+            logger.error(im_filename)
+            # Maybe skip bad turns?
+            raise e
         loss_vt = loss_dict.get("loss_vt", torch.tensor([0.0]))
         loss_person = loss_dict.get("loss_person", torch.tensor([0.0]))
         loss_detection = (
@@ -435,6 +441,10 @@ def train(rank, opt):
             "vt": loss_vt.item(),
             "person": loss_person.item(),
         }
+        # This way if the code fails we can see the losses
+        train_bar.set_postfix(**toreport)
+        train_bar.update()
+        eval_bar.update()
         try:
             total_loss.backward()
         except Exception as e:
@@ -442,8 +452,6 @@ def train(rank, opt):
             logger_report(epoch, tid, toreport, logger)
             logger.error(im_filename)
             raise e
-        train_bar.set_postfix(**toreport)
-        train_bar.update()
         synchronize()
         optimizer.step()
         if tid % opt.summary_every_iter == 0:
