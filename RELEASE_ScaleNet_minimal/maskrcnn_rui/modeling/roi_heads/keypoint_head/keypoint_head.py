@@ -122,14 +122,21 @@ class ROIKeypointHead(torch.nn.Module):
             x = self.feature_extractor(features, proposals)
         else:
             x = features
+        # print(proposals)
+        # print("x.shape", torch.as_tensor(x).shape)
         kp_logits = self.predictor(x)
+        # print("kps_logits", kp_logits.shape)
         output_kp = {}
-        if self.if_roi_h_heads and (not if_notNMS_yet):
+        if self.if_roi_h_heads and (not if_notNMS_yet) and not kp_logits.shape[0]:
+            # NOTE: kp_logits == 0 will fail here
             # v1
             x_conv = self.predictor_person_h_conv33(x)
+            # print("x_conv.shape", x_conv.shape)
             person_h_logits = x_conv.view(x_conv.size(0), -1)
+            # print("person_h_logits.shape", person_h_logits.shape)
             person_h_logits = F.relu(self.predictor_person_h_fc6(person_h_logits))
             person_h_logits = self.predictor_person_h_fc7(person_h_logits)
+            # print("person_h_logits.shape", person_h_logits.shape)
             output_kp.update({"person_h_logits": person_h_logits})
 
         proposals_post = None
@@ -157,9 +164,9 @@ class ROIKeypointHead(torch.nn.Module):
                 )
             ]
             kp_logits_valid = torch.cat(kp_logits_valid_list)
-            assert sum(num_bbox_valid_per_image) == kp_logits_valid.shape[0], (
-                "%d-%d" % (sum(num_bbox_valid_per_image), kp_logits_valid.shape[0])
-            )
+            assert (
+                sum(num_bbox_valid_per_image) == kp_logits_valid.shape[0]
+            ), "%d-%d" % (sum(num_bbox_valid_per_image), kp_logits_valid.shape[0])
             loss_kp = self.loss_evaluator(proposals_valid, kp_logits_valid)
         return x, proposals, proposals_post, dict(loss_kp=loss_kp), output_kp
 

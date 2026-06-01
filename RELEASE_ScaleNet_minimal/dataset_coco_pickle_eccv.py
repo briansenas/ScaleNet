@@ -9,6 +9,7 @@ import torch
 import torchvision
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
+from panorama_cropping_dataset_generation.debugging import getHorizonLine
 from PIL import Image
 from scipy.io import loadmat
 from termcolor import colored
@@ -259,10 +260,11 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
         W, H = im_ori_RGB.size[:2]
         if self.train:
             yannick_results = loadmat(self.yannick_mat_files[k])
-            horizon = yannick_results["pitch"][0][0].astype(np.float32)
+            pitch = yannick_results["pitch"][0][0].astype(np.float32)
+            vfov = yannick_results["vfov"][0][0].astype(np.float32)
+            horizon = getHorizonLine(vfov, pitch)
             horizon_pixels_yannick = H * horizon
             v0 = H - horizon_pixels_yannick
-            vfov = yannick_results["vfov"][0][0].astype(np.float32)
             f_pixels_yannick = H / 2.0 / (np.tan(vfov / 2.0))
         else:
             f_pixels_yannick = -1
@@ -279,6 +281,7 @@ class COCO2017ECCV(torchvision.datasets.coco.CocoDetection):
         # target_maskrcnnTransform.add_field("img_files", [self.img_files[k]] * num_boxes)
 
         if self.train:
+            # MAPPER
             y_person = 1.75
             bbox_good_list = bboxes
             vc = H / 2.0

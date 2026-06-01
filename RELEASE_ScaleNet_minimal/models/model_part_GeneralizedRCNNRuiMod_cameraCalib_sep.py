@@ -56,7 +56,11 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
         )
         if self.if_roi_bbox_heads:
             self.rpn = build_rpn(cfg, self.backbone.out_channels)
-            self.roi_bbox_heads = build_roi_bbox_heads(cfg, self.backbone.out_channels)
+            self.roi_bbox_heads = build_roi_bbox_heads(
+                cfg,
+                opt,
+                self.backbone.out_channels,
+            )
 
         # self.if_camH_pointnet = 'camH_pointnet' not in modules_not_build and opt.pointnet_camH
         # if self.if_camH_pointnet:
@@ -162,9 +166,8 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
                     "bbox_lengths": bbox_lengths,
                 },
             )
-
-            roi_feats = roi_heads_output["feats"]  # [N_all, D]
-            return_dict.update({"roi_feats": roi_feats})
+            # roi_feats = roi_heads_output["feats"]  # [N_all, D]
+            # return_dict.update({"roi_feats": roi_feats})
 
             # Global feat with list_of_oneLargeBbox_list_cpu
         if list_of_oneLargeBbox_list is not None:
@@ -175,7 +178,6 @@ class GeneralizedRCNNRuiMod_cameraCalib(nn.Module):
                     image_sizes_after_transform,
                 )
             ]
-
             features = self.backbone(images.tensors)
             cls_outputs = self.classifier_heads(features, list_of_oneLargeBbox_list)
             return_dict.update(

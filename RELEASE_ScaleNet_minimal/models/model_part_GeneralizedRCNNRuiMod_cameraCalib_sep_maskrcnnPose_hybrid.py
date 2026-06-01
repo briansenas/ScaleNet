@@ -149,8 +149,9 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
         images, image_sizes_after_transform = self.prepare_images(
             original_image_batch_list,
         )
-        # print(images.tensors.shape)
+        # print("images.tensor.shape", images.tensors.shape)
         features = self.backbone(images.tensors)
+        # print("backbone.features", [x.shape for x in features])
         return_dict = {"image_sizes_after_transform": image_sizes_after_transform}
         if self.if_roi_bbox_heads and input_data in ["coco", "IMDB-23K"]:
             if self.opt.est_bbox:
@@ -223,6 +224,9 @@ class GeneralizedRCNNRuiMod_cameraCalib_maskrcnnPose(nn.Module):
                 else:
                     roi_heads_output = self.roi_h_heads(features, list_of_bbox_list)
                     class_logits = roi_heads_output["class_logits"]
+                # print(class_logits.shape)
+                # print(bbox_lengths)
+                # print(list_of_bbox_list_cpu)
                 class_logits_softmax = nn.functional.softmax(class_logits, dim=1)
                 class_logits_softmax_list = class_logits_softmax.split(bbox_lengths)
                 return_dict.update(

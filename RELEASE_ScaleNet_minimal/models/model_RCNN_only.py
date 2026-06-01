@@ -20,7 +20,7 @@ class RCNN_only(nn.Module):
         detections / masks from it.
     """
 
-    def __init__(self, cfg, opt, logger, printer, rank=-1):
+    def __init__(self, cfg, opt, logger, printer, rank=-1, modules_not_build=None):
         super().__init__()
 
         self.opt = opt
@@ -32,11 +32,14 @@ class RCNN_only(nn.Module):
 
         self.cls_names = ["horizon", "pitch", "roll", "vfov", "camH"]
 
+        if modules_not_build is None:
+            modules_not_build = ["roi_h_heads"]
+
         torch.manual_seed(12344)
         self.RCNN = GeneralizedRCNNRuiMod_cameraCalib(
             cfg,
             opt,
-            modules_not_build=["roi_h_heads"],
+            modules_not_build=modules_not_build,
             logger=self.logger,
             rank=self.rank,
         )

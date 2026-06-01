@@ -85,6 +85,7 @@ class FPNPredictorRui(nn.Module):
             num_classes = output_cls_num
         representation_size = in_channels
 
+        # NOTE: Maybe I need to some kinda of non lineality here to improve the classifier when using est-kps architecture.
         self.cls_score = nn.Linear(representation_size, num_classes)
         # num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
         # self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)

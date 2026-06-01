@@ -134,11 +134,9 @@ def build_classifier_heads(cfg, opt, in_channels):
     #             ),
     #         ),
     #     )
-    # pass
 
     # combine individual heads in a single module
     roi_heads = CombinedClassifierHeads(cfg, opt, roi_heads)
-
     return roi_heads
 
 
@@ -170,6 +168,7 @@ class CombinedROIHeads(torch.nn.ModuleDict):
     ):
         losses = {}
         outputs = {}
+        # print([x.shape for x in features])
         if opt.est_bbox:
             x, detections, detections_nms, loss_box = self.box(
                 features,

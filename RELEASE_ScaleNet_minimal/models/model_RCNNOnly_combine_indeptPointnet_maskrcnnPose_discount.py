@@ -471,6 +471,7 @@ class RCNNOnly_combine(nn.Module):
                 input_dict_misc["H_batch"],
                 normalize_with_H=True,
             )
+            # print(f"bboxes_cat_padded: {bboxes_cat_padded}")
 
             if not self.opt.not_rcnn:
                 person_h_list = preds_RCNN["person_h_list"]
@@ -520,6 +521,7 @@ class RCNNOnly_combine(nn.Module):
                 .view(-1, 1, 1)
                 .repeat(1, self.good_num, 1)
             )
+            # print(f"V0_batch: {v0_01_batch_est}")
             if self.opt.if_discount:
                 input_list = [
                     v0_01_batch_est,
@@ -547,8 +549,11 @@ class RCNNOnly_combine(nn.Module):
                     input_list.append(roi_feats_padded_input)
 
             points_input = torch.cat(input_list, 2).permute(0, 2, 1)
-
+            # print(f"Point_net input list shape {[x.shape for x in input_list]}")
+            # print(f"Point_net input values: {[x for x in input_list]}")
+            # print(f"Point_net input shape {points_input.shape}")
             camH_cls_logits = self.net_PointNet({"points": points_input})["cls_logit"]
+            # print(f"CamH_cls_logits {camH_cls_logits.shape}")
             yc_est_batch = self.yc_logits_to_est_yc(
                 camH_cls_logits,
                 input_dict_misc["bins"]["yc_bins_layers_list_torch"][0],
@@ -557,6 +562,7 @@ class RCNNOnly_combine(nn.Module):
                 direct=self.opt.direct_camH,
                 debug=self.opt.debug,
             )
+            # print(f"Yc_est {yc_est_batch}")
             preds_RCNN.update(
                 {"yc_est_batch": yc_est_batch, "output_yc_batch": camH_cls_logits},
             )
@@ -607,6 +613,7 @@ class RCNNOnly_combine(nn.Module):
                     and self.opt.fit_derek,
                 )
             )  # !!!!!!!!
+            # print(f"vt_camEst_N: {vt_camEst_N_delta_paded}")
             output_RCNN.update({"loss_vt_list": []})
             if not self.opt.loss_last_layer:
                 output_RCNN["loss_vt_list"].append(return_dict_fit["loss_vt"])
@@ -912,7 +919,8 @@ class RCNNOnly_combine(nn.Module):
 
                     track_list.update(
                         {
-                            "%d" % (layer_idx + 1): {
+                            "%d"
+                            % (layer_idx + 1): {
                                 "if_detach": not is_last_layer,
                                 "if_vis": if_vis,
                                 "if_fit_derek": is_last_layer and self.opt.fit_derek,
@@ -964,24 +972,24 @@ class RCNNOnly_combine(nn.Module):
         loss_func = torch.nn.L1Loss(reduction="none")
 
         for idx, bboxes_length in enumerate(input_dict["bboxes_length_batch_array"]):
-            # NOTE: Only process the same amount of bboxes that we were able to predict?
-            if bboxes_length != len(preds_RCNN["person_h_list"][idx]):
-                print(
-                    colored(
-                        "---- Total bboxes does not match "
-                        f"{bboxes_length} {len(preds_RCNN['person_h_list'][idx])}",
-                        "yellow",
-                        "on_red",
-                    ),
-                )
-            bboxes_length = min(bboxes_length, len(preds_RCNN["person_h_list"][idx]))
+            # bboxes_length = min(bboxes_length, len(preds_RCNN["person_h_list"][idx]))
             bboxes = input_dict_misc["bboxes_batch"][idx][:bboxes_length]  # [N, 4]
+            if preds_RCNN["person_h_list"][idx][:bboxes_length].numel() <= 0:
+                # NOTE: There is no height information in this batch so ignore this
+                continue
+
             H = input_dict_misc["H_batch"][idx]
+            # print(f"H: {H}")
             vc = H / 2.0
+            # print(f"vc: {vc}")
             v0_est = preds_RCNN["v0_batch_est"][idx]
+            # print(f"V0_est {v0_est}")
             pitch_est = preds_RCNN["pitch_batch_est"][idx]
+            # print(f"Pitch est {pitch_est}")
             f_pixels_yannick_est = preds_RCNN["f_pixels_batch_est"][idx]
+            # print(f"F_pixels: {f_pixels_yannick_est}")
             yc_est = preds_RCNN["yc_est_batch"][idx]
+            # print(f"yc_est: {yc_est}")
             H_np = input_dict_misc["H_batch"][idx].cpu().numpy()
             if self.opt.not_rcnn:
                 h_human_s = (
@@ -1037,6 +1045,7 @@ class RCNNOnly_combine(nn.Module):
                 "f_pixels_yannick": f_pixels_yannick_est,
                 "pitch_est": pitch_est,
             }
+            # print(geo_model_input_dict)
             if self.opt.accu_model:
                 vt_camEst_batch, _, _ = model_utils.accu_model_batch(
                     geo_model_input_dict,
@@ -1044,7 +1053,11 @@ class RCNNOnly_combine(nn.Module):
                 )  # [top H bottom 0]
             else:
                 vt_camEst_batch = model_utils.approx_model(geo_model_input_dict)
+
+            # print(f"vt_camEst_batch: {vt_camEst_batch}")
+            # print(f"vt_gt_batch: {vt_gt_batch}")
             vt_loss_ori_batch = loss_func(vt_gt_batch, vt_camEst_batch) / bboxes[:, 3]
+            # print(f"vt_loss_ori: {vt_loss_ori_batch}")
             vt_loss_ori_batch = torch.where(
                 torch.isnan(vt_loss_ori_batch),
                 torch.zeros_like(vt_loss_ori_batch),
@@ -1056,6 +1069,7 @@ class RCNNOnly_combine(nn.Module):
                 self.opt.cfg.MODEL.LOSS.VT_LOSS_CLAMP,
             )
 
+            # print(f"vt_loss clamped: {vt_loss_batch}")
             for bbox_idx, vt_loss in enumerate(vt_loss_batch.cpu()):
                 vt_loss_allBoxes_dict_cpu.update(
                     {
@@ -1151,23 +1165,31 @@ class RCNNOnly_combine(nn.Module):
                 input_dict_show["bbox_geo"].append(geo_model_input_dict)
                 input_dict_show["bbox_loss"].append(bbox_loss_sample)
 
+            # print(vt_loss_batch)
             vt_loss_sample = torch.mean(vt_loss_batch)
+            # print(vt_loss_sample)
             vt_loss_sample_batch_list.append(vt_loss_sample)
 
+            # print(vt_loss_ori_batch.reshape(-1, 1))
             vt_camEst_N = torch.clamp(
                 vt_loss_ori_batch.reshape((-1, 1)),
                 -self.opt.cfg.MODEL.LOSS.VT_LOSS_CLAMP,
                 self.opt.cfg.MODEL.LOSS.VT_LOSS_CLAMP,
             )
+            # print(f"vt_camEst_N {vt_camEst_N}")
             list_of_vt_camEst_N.append(vt_camEst_N)
 
         vt_loss_batch = torch.stack(vt_loss_sample_batch_list)
+        # print(f"vt_loss_stacked: {vt_loss_batch}")
         loss_vt = torch.mean(vt_loss_batch)
+        # print(f"loss_vt: {loss_vt}")
 
         vt_camEst_N_paded = list_of_tensor_to_tensor_padded(
             list_of_vt_camEst_N,
             self.good_num,
         )  # [batchsize, N, 1] (vt_est-vt), normalized by H
+
+        # print(vt_camEst_N_paded)
 
         return_dict = {
             "vt_loss_batch": vt_loss_batch,
@@ -1319,7 +1341,9 @@ class RCNNOnly_combine(nn.Module):
             bins["vfov_bins_centers_torch"],
             reduce_method,
         )
+        # print(f"vfov: {vfov_estim}")
         f_estim = H_batch.float() / torch.tan(vfov_estim / 2) / 2
+        # print(f"f_estim {f_estim}")
         f_pixels_yannick_batch_est = f_estim
 
         # ([Yannick] 0 = top of the image, 1 = bottom of the image)
